@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Attachment extends Model
 {
     use HasFactory;
+    protected $table = 'attachment';
     protected $fillable = [
         'user_id',
         'post_media_id',

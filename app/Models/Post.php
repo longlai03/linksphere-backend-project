@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Post extends Model
 {
     use HasFactory;
+    protected $table = 'post';
 
     protected $fillable = [
         'user_id',
@@ -35,8 +36,14 @@ class Post extends Model
         return $this->hasMany(Reaction::class);
     }
 
-    // Quan hệ với PostMedia (1 bài viết có nhiều media)
+    // Quan hệ với PostMedia (1 bài viết có nhiều post media)
     public function postMedia(): HasMany
+    {
+        return $this->hasMany(PostMedia::class);
+    }
+
+    // Alias for postMedia to match controller usage
+    public function media(): HasMany
     {
         return $this->hasMany(PostMedia::class);
     }

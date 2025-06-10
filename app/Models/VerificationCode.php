@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class VerificationCode extends Model
 {
     use HasFactory;
-
+    protected $table = 'post_media';
     protected $fillable = [
         'user_id',
         'code',

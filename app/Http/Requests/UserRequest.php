@@ -40,7 +40,7 @@ class UserRequest extends FormRequest
         if ($routeName === 'update-user') {
             return [
                 'nickname' => 'nullable|string',
-                'avatar_url' => 'nullable|image',
+                'avatar_url' => 'nullable|string',
                 'gender' => 'nullable|string',
                 'birthday' => 'nullable|date',
                 'address' => 'nullable|string',

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ChatMessage extends Model
 {
     use HasFactory;
+    protected $table = 'chat_message';
 
     protected $fillable = [
         'chat_id',

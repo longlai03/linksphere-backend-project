@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Notification extends Model
 {
     use HasFactory;
-
+    protected $table = 'notification';
     protected $fillable = [
         'user_id',
         'content',

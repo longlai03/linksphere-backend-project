@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UserRequest;
+use App\Models\Post;
 use App\Models\User;
 use App\Services\User\UserService;
 use Exception;
 use http\Env\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UsersController extends Controller
@@ -88,6 +91,7 @@ class UsersController extends Controller
     public function updateUser(UserRequest $request, int $userId): JsonResponse
     {
         $user = auth()->user();
+
         if (!$user) {
             return response()->json([
                 'error' => 'User not found or unauthorized'
@@ -106,21 +110,44 @@ class UsersController extends Controller
                 'error' => 'User not found'
             ], 404);
         }
+        // Validate input
+        $data = $request->validated();
 
-        $validatedData = $request->validated();
+        // Handle avatar upload if present
+        if (!empty($data['avatar_url'])) {
+            $avatarBase64 = $data['avatar_url'];
 
-        if ($request->hasFile('avatar_url')) {
-            $request->validate([
-                'avatar_url' => 'image|mimes:jpeg,png,jpg,gif,svg',
-            ]);
-            // Lưu ảnh vào thư mục 'avatars' và lấy đường dẫn
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            // Lưu đường dẫn ảnh vào cơ sở dữ liệu
-            $validatedData['avatar_url'] = 'storage/' . $avatarPath;
+            if (preg_match('/^data:image\/(jpeg|png|jpg);base64,/', $avatarBase64)) {
+                [$type, $imageData] = explode(';', $avatarBase64);
+                [, $imageData] = explode(',', $imageData);
+
+                $imageBinary = base64_decode($imageData);
+
+                if ($imageBinary === false) {
+                    return response()->json(['error' => 'Failed to decode image'], 400);
+                }
+
+                $fileName = 'avatar_' . time() . '.png';
+                $path = 'avatars/' . $fileName;
+
+                Storage::disk('public')->put($path, $imageBinary);
+
+                $userToUpdate->avatar_url = 'storage/' . $path;
+            } else {
+                return response()->json([
+                    'error' => 'Invalid Base64 image string'
+                ], 400);
+            }
         }
 
         try {
-            $userToUpdate->update($validatedData); // Cập nhật thông tin người dùng
+            foreach ($data as $key => $value) {
+                if ($key !== 'avatar_url') {
+                    $userToUpdate->$key = $value;
+                }
+            }
+            $userToUpdate->save();
+
             return response()->json([
                 'message' => 'User profile updated successfully',
                 'user' => $userToUpdate
@@ -132,8 +159,7 @@ class UsersController extends Controller
         }
     }
 
-    public
-    function getUserByToken(): JsonResponse
+    public function getUserByToken(): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -141,7 +167,33 @@ class UsersController extends Controller
                 'user' => $user
             ]);
         } catch (Exception $e) {
-            return response()->json(['error' => 'Unauthorized: '.$e], 401);
+            return response()->json(['error' => 'Unauthorized: ' . $e], 401);
+        }
+    }
+    public function getAllPostsByUser(int $userId): JsonResponse
+    {
+        try {
+            $viewer = auth()->user();
+
+            // Lấy các bài viết của người dùng $userId
+            $query = Post::query()->where('user_id', $userId)
+                ->with(['media.attachment'])
+                ->orderByDesc('created_at');
+
+            // Nếu người xem không phải chủ bài viết, lọc theo privacy
+            if ($viewer->id !== $userId) {
+                $query->where('privacy', '!=', 'private');
+            }
+
+            $posts = $query->get();
+
+            return response()->json([
+                'posts' => $posts
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Error fetching user posts: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

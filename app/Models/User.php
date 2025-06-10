@@ -64,7 +64,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     // Quan hệ với bảng Post (1 user có nhiều bài đăng)
-    public function posts(): HasMany
+    public function post(): HasMany
     {
         return $this->hasMany(Post::class);
     }

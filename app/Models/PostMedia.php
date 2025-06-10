@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class PostMedia extends Model
 {
     use HasFactory;
-
     protected $table = 'post_media';
 
     protected $fillable = [

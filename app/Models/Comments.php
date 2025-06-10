@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Comments extends Model
 {
     use HasFactory;
-
+    protected $table = 'comments';
     protected $fillable = [
         'reply_comment_id',
         'post_id',
