@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostMedia;
 use Exception;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
@@ -191,6 +192,100 @@ class PostController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error deleting post: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+    public function getAllPost(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Unauthorized: No user found'
+                ], 401);
+            }
+
+            // Lấy danh sách ID của những người user đang theo dõi
+            $followingIds = $user->followings()
+                ->where('status', 'accepted')
+                ->pluck('followed_id')
+                ->toArray();
+
+            // Lấy danh sách ID của những post đã được load (để tránh trùng lặp)
+            $excludeIds = $request->input('exclude_ids', []);
+            if (!is_array($excludeIds)) {
+                $excludeIds = [];
+            }
+
+            // Query để lấy posts
+            $query = Post::query()
+                ->with([
+                    'user:id,username,nickname,avatar_url',
+                    'media.attachment',
+                    'comments' => function ($query) {
+                        $query->with('user:id,username,nickname,avatar_url')
+                            ->orderBy('created_at', 'desc')
+                            ->limit(3);
+                    },
+                    'reactions' => function ($query) {
+                        $query->with('user:id,username,nickname,avatar_url');
+                    }
+                ])
+                ->where(function ($query) use ($user, $followingIds) {
+                    $query->where(function ($q) use ($user, $followingIds) {
+                        // Lấy tất cả bài post public của mọi người
+                        $q->where('privacy', 'public')
+                            // HOẶC
+                            ->orWhere(function ($q) use ($user, $followingIds) {
+                                // Lấy bài post của những người user đang theo dõi
+                                $q->whereIn('user_id', $followingIds)
+                                    ->where('privacy', 'public');
+                            })
+                            // HOẶC
+                            ->orWhere(function ($q) use ($user) {
+                                // Lấy tất cả bài post của chính user (cả private và public)
+                                $q->where('user_id', $user->id);
+                            });
+                    });
+                });
+
+            // Loại bỏ các post đã load nếu có exclude_ids
+            if (!empty($excludeIds)) {
+                $query->whereNotIn('id', $excludeIds);
+            }
+
+            // Kiểm tra xem có yêu cầu sắp xếp ngẫu nhiên không
+            if ($request->has('random') && $request->input('random')) {
+                $query->inRandomOrder();
+                // Nếu là random, lấy 5 post thay vì phân trang
+                $posts = $query->limit(5)->get();
+                
+                return response()->json([
+                    'posts' => [
+                        'data' => $posts,
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => 5,
+                        'total' => $posts->count(),
+                        'has_more' => $posts->count() === 5
+                    ]
+                ]);
+            } else {
+                // Phân trang kết quả như cũ
+                $posts = $query->orderBy('created_at', 'desc')->paginate(10);
+
+                return response()->json([
+                    'posts' => $posts,
+                    'current_page' => $posts->currentPage(),
+                    'last_page' => $posts->lastPage(),
+                    'per_page' => $posts->perPage(),
+                    'total' => $posts->total()
+                ]);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Error fetching posts: ' . $e->getMessage()
             ], 500);
         }
     }

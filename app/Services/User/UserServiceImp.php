@@ -2,10 +2,14 @@
 
 namespace App\Services\User;
 
+use App\Models\User;
+use App\Models\VerificationCode;
 use App\Repositories\User\UserRepository;
 use App\Services\Base\BaseServiceImp;
 use Exception;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 
@@ -114,6 +118,104 @@ class UserServiceImp extends BaseServiceImp implements UserService
             return $this->userRepository->updateVerifyUser($id, $verify);
         } catch (Exception $e) {
             logger()->error($e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendVerificationCode(string $email): bool
+    {
+        try {
+            $user = User::where('email', $email)->first();
+            if (!$user) {
+                return false;
+            }
+
+            // Tạo mã xác thực mới
+            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $expiresAt = now()->addMinutes(15); // Mã hết hạn sau 15 phút
+
+            // Lưu mã vào database
+            VerificationCode::create([
+                'user_id' => $user->id,
+                'code' => $code,
+                'type' => 'password_reset',
+                'expires_at' => $expiresAt,
+            ]);
+
+            // Gửi email chứa mã xác thực
+            Mail::send('emails.password-reset', ['code' => $code], function ($message) use ($email) {
+                $message->to($email)
+                    ->subject('Đặt lại mật khẩu');
+            });
+
+            return true;
+        } catch (Exception $e) {
+            logger()->error('Error sendVerificationCode: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function verifyCode(string $email, string $code): bool
+    {
+        try {
+            $user = User::where('email', $email)->first();
+            if (!$user) {
+                return false;
+            }
+
+            $verificationCode = VerificationCode::where('user_id', $user->id)
+                ->where('code', $code)
+                ->where('type', 'password_reset')
+                ->where('is_verified', false)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
+
+            if (!$verificationCode) {
+                return false;
+            }
+
+            // Đánh dấu mã đã được xác thực
+            $verificationCode->update(['is_verified' => true]);
+
+            return true;
+        } catch (Exception $e) {
+            logger()->error('Error verifyCode: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function resetPassword(string $email, string $code, string $password): bool
+    {
+        try {
+            $user = User::where('email', $email)->first();
+            if (!$user) {
+                return false;
+            }
+
+            $verificationCode = VerificationCode::where('user_id', $user->id)
+                ->where('code', $code)
+                ->where('type', 'password_reset')
+                ->where('is_verified', true)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->first();
+
+            if (!$verificationCode) {
+                return false;
+            }
+
+            // Cập nhật mật khẩu mới
+            $user->update([
+                'password' => Hash::make($password)
+            ]);
+
+            // Xóa mã xác thực đã sử dụng
+            $verificationCode->delete();
+
+            return true;
+        } catch (Exception $e) {
+            logger()->error('Error resetPassword: ' . $e->getMessage());
             return false;
         }
     }

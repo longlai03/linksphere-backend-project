@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class VerificationCode extends Model
 {
     use HasFactory;
-    protected $table = 'post_media';
+
     protected $fillable = [
         'user_id',
         'code',
@@ -19,12 +19,12 @@ class VerificationCode extends Model
     ];
 
     protected $casts = [
-        'expires_at' => 'datetime',
         'is_verified' => 'boolean',
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+        return $this->belongsTo(User::class);
     }
-}
+} 

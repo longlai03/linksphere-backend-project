@@ -13,4 +13,7 @@ interface UserService extends BaseService
     public function updateUser(int $id, array $attributes): mixed;
     public function deleteUser(int $id): mixed;
     public function updateVerifyUser(int $id, bool $verify): bool;
+    public function sendVerificationCode(string $email): bool;
+    public function verifyCode(string $email, string $code): bool;
+    public function resetPassword(string $email, string $code, string $password): bool;
 }

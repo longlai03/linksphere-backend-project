@@ -7,7 +7,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\User\UserService;
 use Exception;
-use http\Env\Request;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -78,14 +78,117 @@ class UsersController extends Controller
         }
     }
 
-    public function forgotPassword(UserRequest $request)
+    public function forgotPassword(Request $request): JsonResponse
     {
-        //
+        try {
+            $request->validate([
+                'identity' => 'required|string',
+            ]);
+
+            $result = $this->userService->sendVerificationCode($request->input('identity'));
+            if ($result) {
+                return response()->json([
+                    'message' => 'Mã xác thực đã được gửi về email của bạn.'
+                ]);
+            }
+            return response()->json([
+                'error' => 'Không thể gửi mã xác thực. Vui lòng kiểm tra lại thông tin.'
+            ], 400);
+        } catch (Exception $e) {
+            Log::error('Forgot password error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Có lỗi xảy ra khi xử lý yêu cầu: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function resetPassword(UserRequest $request)
+    /**
+     * Gửi mã xác thực về email
+     */
+    public function sendResetCode(Request $request): JsonResponse
     {
-        //
+        try {
+            $request->validate([
+                'email' => 'required|email',
+            ]);
+
+            $result = $this->userService->sendVerificationCode($request->input('email'));
+            if ($result) {
+                return response()->json([
+                    'message' => 'Mã xác thực đã được gửi về email.'
+                ]);
+            }
+            return response()->json([
+                'error' => 'Không thể gửi mã xác thực.'
+            ], 400);
+        } catch (Exception $e) {
+            Log::error('Send reset code error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Có lỗi xảy ra khi gửi mã xác thực: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Xác thực mã xác thực
+     */
+    public function verifyResetCode(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'code' => 'required|string',
+            ]);
+
+            $result = $this->userService->verifyCode($request->input('email'), $request->input('code'));
+            if ($result) {
+                return response()->json([
+                    'message' => 'Mã xác thực hợp lệ.'
+                ]);
+            }
+            return response()->json([
+                'error' => 'Mã xác thực không hợp lệ hoặc đã hết hạn.'
+            ], 400);
+        } catch (Exception $e) {
+            Log::error('Verify reset code error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Có lỗi xảy ra khi xác thực mã: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Đặt lại mật khẩu
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'code' => 'required|string',
+                'password' => 'required|string|min:6|confirmed',
+            ]);
+
+            $result = $this->userService->resetPassword(
+                $request->input('email'),
+                $request->input('code'),
+                $request->input('password')
+            );
+
+            if ($result) {
+                return response()->json([
+                    'message' => 'Đặt lại mật khẩu thành công.'
+                ]);
+            }
+            return response()->json([
+                'error' => 'Không thể đặt lại mật khẩu.'
+            ], 400);
+        } catch (Exception $e) {
+            Log::error('Reset password error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Có lỗi xảy ra khi đặt lại mật khẩu: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function updateUser(UserRequest $request, int $userId): JsonResponse
