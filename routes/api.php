@@ -3,7 +3,8 @@
 use App\Http\Controllers\PostController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UsersController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\CommentController;
 
@@ -12,34 +13,37 @@ use App\Http\Controllers\CommentController;
 //})->middleware('auth:sanctum');
 
 
-Route::post('/register', [UsersController::class, 'register'])->name('register');
-Route::post('/login', [UsersController::class, 'login'])->name('login');
-Route::post('/forgot-password', [UsersController::class, 'forgotPassword'])->name('forgot-password');
-Route::post('/forgot-password/send-code', [UsersController::class, 'sendResetCode']);
-Route::post('/forgot-password/verify-code', [UsersController::class, 'verifyResetCode']);
-Route::post('/forgot-password/reset', [UsersController::class, 'resetPassword']);
+Route::post('/register', [AuthController::class, 'register'])->name('register');
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
+Route::post('/forgot-password/send-code', [AuthController::class, 'sendResetCode']);
+Route::post('/forgot-password/verify-code', [AuthController::class, 'verifyResetCode']);
+Route::post('/forgot-password/reset', [AuthController::class, 'resetPassword']);
 
 Route::middleware('auth:api')->group(function () {
     //auth
-    Route::post('/logout', [UsersController::class, 'logout'])->name('logout');
-    Route::get('/user/me', [UsersController::class, 'getUserByToken']);
-    Route::put('/user/{userId}', [UsersController::class, 'updateUser'])->name('update-user');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/user/me', [AuthController::class, 'getUserByToken']);
+    Route::put('/user/{userId}', [AuthController::class, 'updateUser'])->name('update-user');
     //post
-    Route::get('/user/{userId}/post', [UsersController::class, 'getAllPostsByUser']);
-    Route::get('/posts/feed', [PostController::class, 'getAllPost'])->name('posts.feed');
+    Route::get('/user/{userId}/post', [AuthController::class, 'getAllPostsByUser']);
+    Route::get('/posts/feed', [PostController::class, 'getFeedPost'])->name('posts.feed');
     Route::apiResource('post', PostController::class);
+
+    // User routes
+    Route::get('/users', [UserController::class, 'getUsers']);
+    Route::get('/users/{userId}', [UserController::class, 'getUserById']);
+    Route::get('/users/{userId}/profile', [UserController::class, 'getPublicProfile']);
+    Route::get('/users/{userId}/follow-status', [UserController::class, 'getFollowStatus']);
 
     // Follower routes
     Route::post('/follow', [FollowerController::class, 'follow']);
     Route::post('/unfollow', [FollowerController::class, 'unfollow']);
     Route::post('/accept-follow', [FollowerController::class, 'acceptFollow']);
     Route::post('/decline-follow', [FollowerController::class, 'declineFollow']);
-    Route::post('/block', [FollowerController::class, 'block']);
-    Route::post('/unblock', [FollowerController::class, 'unblock']);
     Route::get('/followers', [FollowerController::class, 'getFollowers']);
     Route::get('/following', [FollowerController::class, 'getFollowing']);
     Route::get('/pending-follow-requests', [FollowerController::class, 'getPendingFollowRequests']);
-    Route::get('/blocked-users', [FollowerController::class, 'getBlockedUsers']);
 
     // Comment routes
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);

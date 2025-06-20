@@ -181,78 +181,6 @@ class FollowerController extends Controller
     }
 
     /**
-     * Chặn một người dùng
-     */
-    public function block(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = Auth::user();
-        $blockedUser = User::findOrFail($request->user_id);
-
-        // Không thể tự chặn chính mình
-        if ($user->id === $blockedUser->id) {
-            return response()->json(['message' => 'You cannot block yourself'], 400);
-        }
-
-        // Cập nhật hoặc tạo mới trạng thái blocked
-        DB::table('followers')
-            ->updateOrInsert(
-                [
-                    'follower_id' => $blockedUser->id,
-                    'followed_id' => $user->id
-                ],
-                [
-                    'status' => 'blocked',
-                    'updated_at' => now()
-                ]
-            );
-
-        // Xóa mối quan hệ theo dõi ngược lại nếu có
-        DB::table('followers')
-            ->where('follower_id', $user->id)
-            ->where('followed_id', $blockedUser->id)
-            ->delete();
-
-        return response()->json(['message' => 'User blocked successfully']);
-    }
-
-    /**
-     * Bỏ chặn một người dùng
-     */
-    public function unblock(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = Auth::user();
-        $blockedUser = User::findOrFail($request->user_id);
-
-        $deleted = DB::table('followers')
-            ->where('follower_id', $blockedUser->id)
-            ->where('followed_id', $user->id)
-            ->where('status', 'blocked')
-            ->delete();
-
-        if (!$deleted) {
-            return response()->json(['message' => 'No block relationship found'], 404);
-        }
-
-        return response()->json(['message' => 'User unblocked successfully']);
-    }
-
-    /**
      * Lấy danh sách người theo dõi của một user
      */
     public function getFollowers(Request $request): JsonResponse
@@ -339,20 +267,4 @@ class FollowerController extends Controller
 
         return response()->json(['pending_requests' => $pendingRequests]);
     }
-
-    /**
-     * Lấy danh sách người dùng đã chặn
-     */
-    public function getBlockedUsers(): JsonResponse
-    {
-        $user = Auth::user();
-        $blockedUsers = DB::table('followers')
-            ->join('users', 'followers.follower_id', '=', 'users.id')
-            ->where('followers.followed_id', $user->id)
-            ->where('followers.status', 'blocked')
-            ->select('users.id', 'users.username', 'users.nickname', 'users.avatar_url')
-            ->get();
-
-        return response()->json(['blocked_users' => $blockedUsers]);
-    }
-} 
+}

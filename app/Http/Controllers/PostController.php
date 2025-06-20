@@ -195,8 +195,8 @@ class PostController extends Controller
             ], 500);
         }
     }
-    
-    public function getAllPost(Request $request): JsonResponse
+
+    public function getFeedPost(Request $request): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -260,7 +260,7 @@ class PostController extends Controller
                 $query->inRandomOrder();
                 // Nếu là random, lấy 5 post thay vì phân trang
                 $posts = $query->limit(5)->get();
-                
+
                 return response()->json([
                     'posts' => [
                         'data' => $posts,
