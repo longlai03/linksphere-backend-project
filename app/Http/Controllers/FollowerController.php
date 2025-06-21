@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,13 +34,12 @@ class FollowerController extends Controller
         }
 
         // Kiểm tra xem đã có mối quan hệ theo dõi chưa
-        $existingFollow = DB::table('followers')
-            ->where('follower_id', $follower->id)
+        $existingFollow = $follower->followings()
             ->where('followed_id', $followed->id)
             ->first();
 
         if ($existingFollow) {
-            $status = match($existingFollow->status) {
+            $status = match($existingFollow->pivot->status) {
                 'pending' => 'Follow request is already pending',
                 'accepted' => 'You are already following this user',
                 'declined' => 'Your follow request was declined',
@@ -50,17 +50,14 @@ class FollowerController extends Controller
         }
 
         // Tạo yêu cầu theo dõi mới
-        DB::table('followers')->insert([
-            'follower_id' => $follower->id,
-            'followed_id' => $followed->id,
+        $follower->followings()->attach($followed->id, [
             'status' => 'pending',
-            'request_at' => now(),
-            'created_at' => now(),
-            'updated_at' => now()
+            'request_at' => now()
         ]);
 
         // Tạo thông báo cho người được theo dõi
         $followed->notifications()->create([
+            'sender_id' => $follower->id,
             'content' => "{$follower->nickname} đã gửi yêu cầu theo dõi bạn",
             'type' => 'follow_request',
             'read' => false
@@ -85,27 +82,25 @@ class FollowerController extends Controller
         $user = Auth::user();
         $follower = User::findOrFail($request->follower_id);
 
-        $follow = DB::table('followers')
+        // Sử dụng Eloquent relationship
+        $follow = $user->followers()
             ->where('follower_id', $follower->id)
-            ->where('followed_id', $user->id)
-            ->where('status', 'pending')
+            ->wherePivot('status', 'pending')
             ->first();
 
         if (!$follow) {
             return response()->json(['message' => 'No pending follow request found'], 404);
         }
 
-        DB::table('followers')
-            ->where('follower_id', $follower->id)
-            ->where('followed_id', $user->id)
-            ->update([
-                'status' => 'accepted',
-                'respond_at' => now(),
-                'updated_at' => now()
-            ]);
+        // Cập nhật trạng thái follow
+        $user->followers()->updateExistingPivot($follower->id, [
+            'status' => 'accepted',
+            'respond_at' => now()
+        ]);
 
         // Tạo thông báo cho người theo dõi
         $follower->notifications()->create([
+            'sender_id' => $user->id,
             'content' => "{$user->nickname} đã chấp nhận yêu cầu theo dõi của bạn",
             'type' => 'follow_accepted',
             'read' => false
@@ -130,24 +125,21 @@ class FollowerController extends Controller
         $user = Auth::user();
         $follower = User::findOrFail($request->follower_id);
 
-        $follow = DB::table('followers')
+        // Sử dụng Eloquent relationship
+        $follow = $user->followers()
             ->where('follower_id', $follower->id)
-            ->where('followed_id', $user->id)
-            ->where('status', 'pending')
+            ->wherePivot('status', 'pending')
             ->first();
 
         if (!$follow) {
             return response()->json(['message' => 'No pending follow request found'], 404);
         }
 
-        DB::table('followers')
-            ->where('follower_id', $follower->id)
-            ->where('followed_id', $user->id)
-            ->update([
-                'status' => 'declined',
-                'respond_at' => now(),
-                'updated_at' => now()
-            ]);
+        // Cập nhật trạng thái follow
+        $user->followers()->updateExistingPivot($follower->id, [
+            'status' => 'declined',
+            'respond_at' => now()
+        ]);
 
         return response()->json(['message' => 'Follow request declined successfully']);
     }
@@ -168,12 +160,10 @@ class FollowerController extends Controller
         $follower = Auth::user();
         $followed = User::findOrFail($request->followed_id);
 
-        $deleted = DB::table('followers')
-            ->where('follower_id', $follower->id)
-            ->where('followed_id', $followed->id)
-            ->delete();
+        // Sử dụng Eloquent relationship để xóa
+        $detached = $follower->followings()->detach($followed->id);
 
-        if (!$deleted) {
+        if ($detached === 0) {
             return response()->json(['message' => 'No follow relationship found'], 404);
         }
 
@@ -195,18 +185,14 @@ class FollowerController extends Controller
 
         $user = User::findOrFail($request->user_id);
         $followers = $user->followers()
-            ->where('status', 'accepted')
-            ->with(['followers' => function ($query) {
-                $query->where('status', 'accepted');
-            }])
+            ->wherePivot('status', 'accepted')
             ->get()
             ->map(function ($follower) {
                 return [
                     'id' => $follower->id,
                     'username' => $follower->username,
                     'nickname' => $follower->nickname,
-                    'avatar_url' => $follower->avatar_url,
-                    'is_following_back' => $follower->followers->isNotEmpty()
+                    'avatar_url' => $follower->avatar_url
                 ];
             });
 
@@ -228,18 +214,14 @@ class FollowerController extends Controller
 
         $user = User::findOrFail($request->user_id);
         $following = $user->followings()
-            ->where('status', 'accepted')
-            ->with(['followers' => function ($query) {
-                $query->where('status', 'accepted');
-            }])
+            ->wherePivot('status', 'accepted')
             ->get()
             ->map(function ($followed) {
                 return [
                     'id' => $followed->id,
                     'username' => $followed->username,
                     'nickname' => $followed->nickname,
-                    'avatar_url' => $followed->avatar_url,
-                    'is_following_back' => $followed->followers->isNotEmpty()
+                    'avatar_url' => $followed->avatar_url
                 ];
             });
 

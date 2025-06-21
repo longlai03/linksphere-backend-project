@@ -209,11 +209,7 @@ class UserController extends Controller
             if ($currentUser->id === $targetUserId) {
                 return response()->json([
                     'success' => true,
-                    'data' => [
-                        'is_following' => false,
-                        'is_followed_by' => false,
-                        'follow_status' => 'self'
-                    ]
+                    'data' => 'self'
                 ]);
             }
 
@@ -222,27 +218,15 @@ class UserController extends Controller
                 ->where('followed_id', $targetUserId)
                 ->first();
 
-            $followedBy = DB::table('followers')
-                ->where('follower_id', $targetUserId)
-                ->where('followed_id', $currentUser->id)
-                ->where('status', 'accepted')
-                ->exists();
-
             $followStatus = 'not_following';
-            $isFollowing = false;
 
             if ($following) {
                 $followStatus = $following->status;
-                $isFollowing = $following->status === 'accepted';
             }
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'is_following' => $isFollowing,
-                    'is_followed_by' => $followedBy,
-                    'follow_status' => $followStatus
-                ]
+                'data' => $followStatus
             ]);
 
         } catch (Exception $e) {

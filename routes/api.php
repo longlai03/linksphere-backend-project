@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\NotificationController;
 
 //Route::get('/user', function (Request $request) {
 //    return $request->user();
@@ -51,4 +52,9 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/comments/{comment}', [CommentController::class, 'update']);
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     Route::get('/comments/{comment}/replies', [CommentController::class, 'getReplies']);
+
+    // Notification routes
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications/by-sender', [NotificationController::class, 'deleteBySenderAndType']);
 });
