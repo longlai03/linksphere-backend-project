@@ -235,4 +235,80 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Lấy danh sách người theo dõi của một user
+     */
+    public function getFollowers(int $userId): JsonResponse
+    {
+        try {
+            $user = User::find($userId);
+
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Người dùng không tồn tại'
+                ], 404);
+            }
+
+            $followers = $user->followers()
+                ->wherePivot('status', 'accepted')
+                ->get()
+                ->map(function ($follower) {
+                    return [
+                        'id' => $follower->id,
+                        'username' => $follower->username,
+                        'nickname' => $follower->nickname,
+                        'avatar_url' => $follower->avatar_url
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $followers
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Lấy danh sách người mà một user đang theo dõi
+     */
+    public function getFollowing(int $userId): JsonResponse
+    {
+        try {
+            $user = User::find($userId);
+
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Người dùng không tồn tại'
+                ], 404);
+            }
+
+            $following = $user->followings()
+                ->wherePivot('status', 'accepted')
+                ->get()
+                ->map(function ($followed) {
+                    return [
+                        'id' => $followed->id,
+                        'username' => $followed->username,
+                        'nickname' => $followed->nickname,
+                        'avatar_url' => $followed->avatar_url
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $following
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

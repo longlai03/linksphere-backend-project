@@ -9,11 +9,6 @@ use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotificationController;
 
-//Route::get('/user', function (Request $request) {
-//    return $request->user();
-//})->middleware('auth:sanctum');
-
-
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
@@ -36,14 +31,14 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/users/{userId}', [UserController::class, 'getUserById']);
     Route::get('/users/{userId}/profile', [UserController::class, 'getPublicProfile']);
     Route::get('/users/{userId}/follow-status', [UserController::class, 'getFollowStatus']);
+    Route::get('/users/{userId}/followers', [UserController::class, 'getFollowers']);
+    Route::get('/users/{userId}/following', [UserController::class, 'getFollowing']);
 
     // Follower routes
-    Route::post('/follow', [FollowerController::class, 'follow']);
-    Route::post('/unfollow', [FollowerController::class, 'unfollow']);
+    Route::post('/user/{userId}/follow', [FollowerController::class, 'follow']);
+    Route::post('/user/{userId}/unfollow', [FollowerController::class, 'unfollow']);
     Route::post('/accept-follow', [FollowerController::class, 'acceptFollow']);
     Route::post('/decline-follow', [FollowerController::class, 'declineFollow']);
-    Route::get('/followers', [FollowerController::class, 'getFollowers']);
-    Route::get('/following', [FollowerController::class, 'getFollowing']);
     Route::get('/pending-follow-requests', [FollowerController::class, 'getPendingFollowRequests']);
 
     // Comment routes

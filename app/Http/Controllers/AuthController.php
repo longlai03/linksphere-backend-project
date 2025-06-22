@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AvatarHelper;
 use App\Http\Requests\UserRequest;
 use App\Models\Post;
 use App\Models\User;
@@ -210,16 +211,16 @@ class AuthController extends Controller
         try {
             $updateData = $request->validated();
 
-            // Handle avatar upload
-            if ($request->hasFile('avatar')) {
-                $avatar = $request->file('avatar');
-                $avatarName = time() . '_' . $avatar->getClientOriginalName();
-                $avatar->storeAs('public/avatars', $avatarName);
-                $updateData['avatar_url'] = 'storage/avatars/' . $avatarName;
-
-                // Delete old avatar if exists
-                if ($user->avatar_url && Storage::exists('public/' . str_replace('storage/', '', $user->avatar_url))) {
-                    Storage::delete('public/' . str_replace('storage/', '', $user->avatar_url));
+            if (!empty($updateData['avatar_url'])) {
+                try {
+                    $updateData['avatar_url'] = AvatarHelper::processAvatarBase64(
+                        $updateData['avatar_url'], 
+                        $user->avatar_url
+                    );
+                } catch (Exception $e) {
+                    return response()->json([
+                        'error' => $e->getMessage()
+                    ], 400);
                 }
             }
 

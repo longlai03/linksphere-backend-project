@@ -15,18 +15,10 @@ class FollowerController extends Controller
     /**
      * Gửi yêu cầu theo dõi một người dùng
      */
-    public function follow(Request $request): JsonResponse
+    public function follow(Request $request, $userId): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'followed_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         $follower = Auth::user();
-        $followed = User::findOrFail($request->followed_id);
+        $followed = User::findOrFail($userId);
 
         // Không thể tự theo dõi chính mình
         if ($follower->id === $followed->id) {
@@ -147,18 +139,10 @@ class FollowerController extends Controller
     /**
      * Hủy theo dõi một người dùng
      */
-    public function unfollow(Request $request): JsonResponse
+    public function unfollow(Request $request, $userId): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'followed_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
         $follower = Auth::user();
-        $followed = User::findOrFail($request->followed_id);
+        $followed = User::findOrFail($userId);
 
         // Sử dụng Eloquent relationship để xóa
         $detached = $follower->followings()->detach($followed->id);
@@ -168,64 +152,6 @@ class FollowerController extends Controller
         }
 
         return response()->json(['message' => 'Unfollowed successfully']);
-    }
-
-    /**
-     * Lấy danh sách người theo dõi của một user
-     */
-    public function getFollowers(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = User::findOrFail($request->user_id);
-        $followers = $user->followers()
-            ->wherePivot('status', 'accepted')
-            ->get()
-            ->map(function ($follower) {
-                return [
-                    'id' => $follower->id,
-                    'username' => $follower->username,
-                    'nickname' => $follower->nickname,
-                    'avatar_url' => $follower->avatar_url
-                ];
-            });
-
-        return response()->json(['followers' => $followers]);
-    }
-
-    /**
-     * Lấy danh sách người mà một user đang theo dõi
-     */
-    public function getFollowing(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = User::findOrFail($request->user_id);
-        $following = $user->followings()
-            ->wherePivot('status', 'accepted')
-            ->get()
-            ->map(function ($followed) {
-                return [
-                    'id' => $followed->id,
-                    'username' => $followed->username,
-                    'nickname' => $followed->nickname,
-                    'avatar_url' => $followed->avatar_url
-                ];
-            });
-
-        return response()->json(['following' => $following]);
     }
 
     /**
