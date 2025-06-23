@@ -12,6 +12,9 @@ class Reaction extends Model
     protected $table = 'reaction';
 
     public $timestamps = false;
+    
+    // Sử dụng auto-incrementing ID
+    public $incrementing = true;
 
     protected $fillable = [
         'user_id',

@@ -25,6 +25,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/user/{userId}/post', [AuthController::class, 'getAllPostsByUser']);
     Route::get('/posts/feed', [PostController::class, 'getFeedPost'])->name('posts.feed');
     Route::apiResource('post', PostController::class);
+    Route::post('/post/{id}/like', [PostController::class, 'like']);
+    Route::delete('/post/{id}/like', [PostController::class, 'unlike']);
 
     // User routes
     Route::get('/users', [UserController::class, 'getUsers']);

@@ -6,6 +6,7 @@ use App\Http\Requests\PostRequest;
 use App\Models\Attachment;
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\Reaction;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -96,12 +97,24 @@ class PostController extends Controller
     public function show(int $postId): JsonResponse
     {
         try {
+            $currentUser = auth()->user();
+            
             $post = Post::with(['media.attachment', 'user'])->find($postId);
 
             if (!$post) {
                 return response()->json([
                     'error' => 'Post not found'
                 ], 404);
+            }
+
+            // Thêm số lượng likes
+            $post->likesCount = $post->reactions()->count();
+            
+            // Kiểm tra xem user hiện tại đã like post này chưa
+            if ($currentUser) {
+                $post->liked = $post->reactions()->where('user_id', $currentUser->id)->exists();
+            } else {
+                $post->liked = false;
             }
 
             return response()->json([
@@ -261,6 +274,13 @@ class PostController extends Controller
                 // Nếu là random, lấy 5 post thay vì phân trang
                 $posts = $query->limit(5)->get();
 
+                // Thêm thông tin liked và likes count cho mỗi post
+                $posts = $posts->map(function ($post) use ($user) {
+                    $post->likesCount = $post->reactions()->count();
+                    $post->liked = $post->reactions()->where('user_id', $user->id)->exists();
+                    return $post;
+                });
+
                 return response()->json([
                     'posts' => [
                         'data' => $posts,
@@ -275,6 +295,13 @@ class PostController extends Controller
                 // Phân trang kết quả như cũ
                 $posts = $query->orderBy('created_at', 'desc')->paginate(10);
 
+                // Thêm thông tin liked và likes count cho mỗi post
+                $posts->getCollection()->transform(function ($post) use ($user) {
+                    $post->likesCount = $post->reactions()->count();
+                    $post->liked = $post->reactions()->where('user_id', $user->id)->exists();
+                    return $post;
+                });
+
                 return response()->json([
                     'posts' => $posts,
                     'current_page' => $posts->currentPage(),
@@ -286,6 +313,108 @@ class PostController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error fetching posts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Like a post
+     */
+    public function like(int $postId): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Unauthorized: No user found'
+                ], 401);
+            }
+
+            $post = Post::find($postId);
+            if (!$post) {
+                return response()->json([
+                    'error' => 'Post not found'
+                ], 404);
+            }
+
+            // Kiểm tra xem user đã like post này chưa
+            $existingReaction = Reaction::where('user_id', $user->id)
+                ->where('post_id', $postId)
+                ->first();
+
+            if ($existingReaction) {
+                return response()->json([
+                    'error' => 'User has already liked this post'
+                ], 400);
+            }
+
+            // Tạo reaction mới
+            Reaction::create([
+                'user_id' => $user->id,
+                'post_id' => $postId,
+            ]);
+
+            // Lấy số lượng likes mới
+            $likesCount = Reaction::where('post_id', $postId)->count();
+
+            return response()->json([
+                'message' => 'Post liked successfully',
+                'likes_count' => $likesCount,
+                'is_liked' => true
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Error liking post: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Unlike a post
+     */
+    public function unlike(int $postId): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json([
+                    'error' => 'Unauthorized: No user found'
+                ], 401);
+            }
+
+            $post = Post::find($postId);
+            if (!$post) {
+                return response()->json([
+                    'error' => 'Post not found'
+                ], 404);
+            }
+
+            // Tìm và xóa reaction bằng composite key
+            $reaction = Reaction::where('user_id', $user->id)
+                ->where('post_id', $postId)
+                ->first();
+
+            if (!$reaction) {
+                return response()->json([
+                    'error' => 'User has not liked this post'
+                ], 400);
+            }
+
+            $reaction->delete();
+
+            // Lấy số lượng likes mới
+            $likesCount = Reaction::where('post_id', $postId)->count();
+
+            return response()->json([
+                'message' => 'Post unliked successfully',
+                'likes_count' => $likesCount,
+                'is_liked' => false
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Error unliking post: ' . $e->getMessage()
             ], 500);
         }
     }
