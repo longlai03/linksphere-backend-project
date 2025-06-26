@@ -29,7 +29,7 @@ class UserServiceImp extends BaseServiceImp implements UserService
     {
         try {
             $register = $this->userRepository->registerUser($attributes);
-            if(!$register){
+            if (!$register) {
                 return false;
             }
             $token = app('tymon.jwt.auth')->fromUser($register);
@@ -141,13 +141,13 @@ class UserServiceImp extends BaseServiceImp implements UserService
                 'type' => 'password_reset',
                 'expires_at' => $expiresAt,
             ]);
+            logger()->error('call me');
 
             // Gửi email chứa mã xác thực
             Mail::send('emails.password-reset', ['code' => $code], function ($message) use ($email) {
                 $message->to($email)
                     ->subject('Đặt lại mật khẩu');
             });
-
             return true;
         } catch (Exception $e) {
             logger()->error('Error sendVerificationCode: ' . $e->getMessage());

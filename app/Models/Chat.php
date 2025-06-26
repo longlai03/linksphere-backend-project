@@ -13,6 +13,7 @@ class Chat extends Model
     protected $table = 'chat';
     protected $fillable = [
         'create_by',
+        'participant_id',
         'created_at',
         'updated_at',
     ];
@@ -25,5 +26,10 @@ class Chat extends Model
     public function chatMessages(): HasMany
     {
         return $this->hasMany(ChatMessage::class);
+    }
+    // Người còn lại trong hội thoại
+    public function participant(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'participant_id');
     }
 }

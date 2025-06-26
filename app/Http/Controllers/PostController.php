@@ -225,12 +225,6 @@ class PostController extends Controller
                 ->pluck('followed_id')
                 ->toArray();
 
-            // Lấy danh sách ID của những post đã được load (để tránh trùng lặp)
-            $excludeIds = $request->input('exclude_ids', []);
-            if (!is_array($excludeIds)) {
-                $excludeIds = [];
-            }
-
             // Query để lấy posts
             $query = Post::query()
                 ->with([
@@ -245,21 +239,18 @@ class PostController extends Controller
                         $query->with('user:id,username,nickname,avatar_url');
                     }
                 ])
-                ->where(function ($query) use ($user, $followingIds) {
-                    $query->where(function ($q) use ($user, $followingIds) {
-                        // Lấy tất cả bài post public của mọi người
-                        $q->where('privacy', 'public')
-                            // HOẶC
-                            ->orWhere(function ($q) use ($user, $followingIds) {
-                                // Lấy bài post của những người user đang theo dõi
-                                $q->whereIn('user_id', $followingIds)
-                                    ->where('privacy', 'public');
-                            })
-                            // HOẶC
-                            ->orWhere(function ($q) use ($user) {
-                                // Lấy tất cả bài post của chính user (cả private và public)
-                                $q->where('user_id', $user->id);
-                            });
+                ->where(function ($q) use ($user, $followingIds) {
+                    // Bài viết của chính mình
+                    $q->where('user_id', $user->id);
+                    // Bài viết của bạn bè (theo dõi) với privacy là friends hoặc public
+                    $q->orWhere(function ($q2) use ($followingIds) {
+                        $q2->whereIn('user_id', $followingIds)
+                            ->whereIn('privacy', ['public', 'friends']);
+                    });
+                    // Bài viết của người khác (không phải bạn bè) với privacy là public
+                    $q->orWhere(function ($q3) use ($user, $followingIds) {
+                        $q3->whereNotIn('user_id', array_merge([$user->id], $followingIds))
+                            ->where('privacy', 'public');
                     });
                 });
 
@@ -268,48 +259,19 @@ class PostController extends Controller
                 $query->whereNotIn('id', $excludeIds);
             }
 
-            // Kiểm tra xem có yêu cầu sắp xếp ngẫu nhiên không
-            if ($request->has('random') && $request->input('random')) {
-                $query->inRandomOrder();
-                // Nếu là random, lấy 5 post thay vì phân trang
-                $posts = $query->limit(5)->get();
+            // Lấy tất cả post, không phân trang
+            $posts = $query->orderBy('created_at', 'desc')->get();
 
-                // Thêm thông tin liked và likes count cho mỗi post
-                $posts = $posts->map(function ($post) use ($user) {
-                    $post->likesCount = $post->reactions()->count();
-                    $post->liked = $post->reactions()->where('user_id', $user->id)->exists();
-                    return $post;
-                });
+            // Thêm thông tin liked và likes count cho mỗi post
+            $posts = $posts->map(function ($post) use ($user) {
+                $post->likesCount = $post->reactions()->count();
+                $post->liked = $post->reactions()->where('user_id', $user->id)->exists();
+                return $post;
+            });
 
-                return response()->json([
-                    'posts' => [
-                        'data' => $posts,
-                        'current_page' => 1,
-                        'last_page' => 1,
-                        'per_page' => 5,
-                        'total' => $posts->count(),
-                        'has_more' => $posts->count() === 5
-                    ]
-                ]);
-            } else {
-                // Phân trang kết quả như cũ
-                $posts = $query->orderBy('created_at', 'desc')->paginate(10);
-
-                // Thêm thông tin liked và likes count cho mỗi post
-                $posts->getCollection()->transform(function ($post) use ($user) {
-                    $post->likesCount = $post->reactions()->count();
-                    $post->liked = $post->reactions()->where('user_id', $user->id)->exists();
-                    return $post;
-                });
-
-                return response()->json([
-                    'posts' => $posts,
-                    'current_page' => $posts->currentPage(),
-                    'last_page' => $posts->lastPage(),
-                    'per_page' => $posts->perPage(),
-                    'total' => $posts->total()
-                ]);
-            }
+            return response()->json([
+                'posts' => $posts
+            ]);
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error fetching posts: ' . $e->getMessage()

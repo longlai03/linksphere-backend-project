@@ -114,10 +114,9 @@ class UserController extends Controller
             }
 
             // Phân trang
-            $perPage = $request->input('per_page', 10);
             $users = $query->select([
                 'id', 'username', 'nickname', 'avatar_url', 'bio', 'created_at'
-            ])->paginate($perPage);
+            ])->get();
 
             return response()->json([
                 'success' => true,

@@ -41,4 +41,15 @@ class Comments extends Model
     {
         return $this->hasMany(Comments::class, 'reply_comment_id');
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::deleting(function ($comment) {
+            // Xóa tất cả replies của comment này (đệ quy)
+            foreach ($comment->replies as $reply) {
+                $reply->delete();
+            }
+        });
+    }
 }

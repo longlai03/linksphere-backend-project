@@ -30,14 +30,10 @@ class CommentController extends Controller
                 ->with(['user:id,username,nickname,avatar_url', 'replies.user:id,username,nickname,avatar_url'])
                 ->whereNull('reply_comment_id')
                 ->orderBy('created_at', 'desc')
-                ->paginate(10);
+                ->get();
 
             return response()->json([
-                'comments' => $comments,
-                'current_page' => $comments->currentPage(),
-                'last_page' => $comments->lastPage(),
-                'per_page' => $comments->perPage(),
-                'total' => $comments->total()
+                'comments' => $comments
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -238,14 +234,10 @@ class CommentController extends Controller
             $replies = $comment->replies()
                 ->with('user:id,username,nickname,avatar_url')
                 ->orderBy('created_at', 'asc')
-                ->paginate(10);
+                ->get();
 
             return response()->json([
                 'replies' => $replies,
-                'current_page' => $replies->currentPage(),
-                'last_page' => $replies->lastPage(),
-                'per_page' => $replies->perPage(),
-                'total' => $replies->total()
             ]);
 
         } catch (Exception $e) {

@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\FollowerController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ConversationController;
 
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -54,4 +55,16 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::delete('/notifications/by-sender', [NotificationController::class, 'deleteBySenderAndType']);
+
+    // Conversation (Chat) routes
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/{conversationId}', [ConversationController::class, 'show']);
+    Route::get('/conversations/{userId}/direct', [ConversationController::class, 'getOrCreateDirect']);
+    Route::get('/conversations/{conversationId}/messages', [ConversationController::class, 'getMessages']);
+    Route::post('/conversations/{conversationId}/messages', [ConversationController::class, 'sendMessage']);
+    Route::post('/conversations/{conversationId}/read', [ConversationController::class, 'markAsRead']);
+    Route::delete('/conversations/{conversationId}', [ConversationController::class, 'destroy']);
+    
+    // Search users for messaging
+    Route::get('/users/search-for-messages', [ConversationController::class, 'searchUsers']);
 });
