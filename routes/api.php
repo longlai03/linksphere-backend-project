@@ -23,7 +23,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/user/me', [AuthController::class, 'getUserByToken']);
     Route::put('/user/{userId}', [AuthController::class, 'updateUser'])->name('update-user');
     //post
-    Route::get('/user/{userId}/post', [AuthController::class, 'getAllPostsByUser']);
+    Route::get('/user/{userId}/post', [UserController::class, 'getAllPostsByUser']);
     Route::get('/posts/feed', [PostController::class, 'getFeedPost'])->name('posts.feed');
     Route::apiResource('post', PostController::class);
     Route::post('/post/{id}/like', [PostController::class, 'like']);

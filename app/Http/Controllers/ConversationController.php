@@ -50,9 +50,14 @@ class ConversationController extends Controller
                 'avatar' => $participant ? $participant->avatar_url : null,
                 'last_message' => $lastMessage ? [
                     'id' => $lastMessage->id,
-                    'content' => $lastMessage->content,
+                    'chat_id' => $lastMessage->chat_id,
+                    'attachment_id' => $lastMessage->attachment_id,
                     'sender_id' => $lastMessage->sender_id,
+                    'status' => $lastMessage->status,
+                    'content' => $lastMessage->content,
                     'sent_at' => $lastMessage->sent_at,
+                    'created_at' => $lastMessage->created_at,
+                    'updated_at' => $lastMessage->updated_at,
                     'sender' => $lastMessage->sender,
                 ] : null,
                 'unread_count' => $this->getUnreadCount($chat, $user),
@@ -82,6 +87,9 @@ class ConversationController extends Controller
         $chat = Chat::with([
             'creator',
             'participant',
+            'chatMessages' => function ($query) {
+                $query->latest('sent_at')->limit(1);
+            },
             'chatMessages.sender'
         ])->find($conversationId);
 
@@ -95,6 +103,7 @@ class ConversationController extends Controller
         }
 
         $participant = $chat->participant_id == $user->id ? $chat->creator : $chat->participant;
+        $lastMessage = $chat->chatMessages->first();
 
         return response()->json([
             'success' => true,
@@ -103,6 +112,18 @@ class ConversationController extends Controller
                 'type' => 'direct',
                 'name' => $participant ? $participant->nickname : 'Người dùng',
                 'avatar' => $participant ? $participant->avatar_url : null,
+                'last_message' => $lastMessage ? [
+                    'id' => $lastMessage->id,
+                    'chat_id' => $lastMessage->chat_id,
+                    'attachment_id' => $lastMessage->attachment_id,
+                    'sender_id' => $lastMessage->sender_id,
+                    'status' => $lastMessage->status,
+                    'content' => $lastMessage->content,
+                    'sent_at' => $lastMessage->sent_at,
+                    'created_at' => $lastMessage->created_at,
+                    'updated_at' => $lastMessage->updated_at,
+                    'sender' => $lastMessage->sender,
+                ] : null,
                 'unread_count' => $this->getUnreadCount($chat, $user),
                 'other_participant' => $participant,
                 'creator' => $chat->creator,
@@ -194,11 +215,11 @@ class ConversationController extends Controller
         }
 
         // Lấy tin nhắn với pagination
-        $perPage = $request->get('per_page', 50);
+        // $perPage = $request->get('per_page', 50);
         $messages = $chat->chatMessages()
             ->with('sender')
             ->orderBy('sent_at', 'desc')
-            ->paginate($perPage);
+            ->get();
 
         // Đánh dấu tin nhắn đã đọc
         $this->markMessagesAsRead($chat, $user);

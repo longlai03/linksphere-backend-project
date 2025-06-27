@@ -262,37 +262,4 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
-    public function getAllPostsByUser(int $userId): JsonResponse
-    {
-        try {
-            $currentUser = auth()->user();
-            
-            $posts = Post::where('user_id', $userId)
-                ->with('user', 'media.attachment')
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($post) use ($currentUser) {
-                    // Thêm số lượng likes
-                    $post->likesCount = $post->reactions()->count();
-                    
-                    // Kiểm tra xem user hiện tại đã like post này chưa
-                    if ($currentUser) {
-                        $post->liked = $post->reactions()->where('user_id', $currentUser->id)->exists();
-                    } else {
-                        $post->liked = false;
-                    }
-                    
-                    return $post;
-                });
-
-            return response()->json([
-                'posts' => $posts
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'error' => 'Error getting posts: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 }

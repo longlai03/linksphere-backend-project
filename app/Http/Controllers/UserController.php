@@ -310,4 +310,46 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    public function getAllPostsByUser(int $userId): JsonResponse
+    {
+        try {
+            $currentUser = auth()->user();
+            $isOwner = $currentUser && $currentUser->id == $userId;
+            $isFollower = false;
+            if ($currentUser && !$isOwner) {
+                $isFollower = DB::table('followers')
+                    ->where('follower_id', $currentUser->id)
+                    ->where('followed_id', $userId)
+                    ->where('status', 'accepted')
+                    ->exists();
+            }
+
+            $query = Post::where('user_id', $userId)
+                ->with('user', 'media.attachment');
+
+            if ($isOwner) {
+                // Xem được tất cả
+            } elseif ($isFollower) {
+                $query->whereIn('privacy', ['public', 'friends']);
+            } else {
+                $query->where('privacy', 'public');
+            }
+
+            $posts = $query->orderBy('created_at', 'desc')->get()
+                ->map(function ($post) use ($currentUser) {
+                    $post->likesCount = $post->reactions()->count();
+                    $post->liked = $currentUser ? $post->reactions()->where('user_id', $currentUser->id)->exists() : false;
+                    return $post;
+                });
+
+            return response()->json([
+                'posts' => $posts
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Error getting posts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
