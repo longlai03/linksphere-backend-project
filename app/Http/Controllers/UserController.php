@@ -2,59 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Post;
+use App\Services\User\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Exception;
 
 class UserController extends Controller
 {
+    private UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Lấy thông tin người dùng theo ID
      */
     public function getUserById(int $userId): JsonResponse
     {
         try {
-            $user = User::find($userId);
-
-            if (!$user) {
+            $result = $this->userService->getUserById($userId);
+            
+            if (!$result) {
                 return response()->json([
                     'error' => 'Người dùng không tồn tại'
                 ], 404);
             }
 
-            // Lấy số lượng followers và following
-            $followersCount = DB::table('followers')
-                ->where('followed_id', $userId)
-                ->where('status', 'accepted')
-                ->count();
-
-            $followingCount = DB::table('followers')
-                ->where('follower_id', $userId)
-                ->where('status', 'accepted')
-                ->count();
-
-            // Lấy số lượng posts
-            $postsCount = Post::where('user_id', $userId)->count();
-
-            // Kiểm tra xem user hiện tại có đang follow user này không
-            $currentUser = auth()->user();
-            $isFollowing = false;
-            $followStatus = null;
-
-            if ($currentUser && $currentUser->id !== $userId) {
-                $followRelation = DB::table('followers')
-                    ->where('follower_id', $currentUser->id)
-                    ->where('followed_id', $userId)
-                    ->first();
-
-                if ($followRelation) {
-                    $isFollowing = $followRelation->status === 'accepted';
-                    $followStatus = $followRelation->status;
-                }
-            }
+            $user = $result['user'];
+            $stats = $result['stats'];
+            $isFollowing = $result['is_following'];
+            $followStatus = $result['follow_status'];
 
             $userData = [
                 'id' => $user->id,
@@ -67,11 +46,7 @@ class UserController extends Controller
                 'address' => $user->address,
                 'hobbies' => $user->hobbies,
                 'created_at' => $user->created_at,
-                'stats' => [
-                    'followers_count' => $followersCount,
-                    'following_count' => $followingCount,
-                    'posts_count' => $postsCount
-                ],
+                'stats' => $stats,
                 'is_following' => $isFollowing,
                 'follow_status' => $followStatus
             ];
@@ -102,21 +77,18 @@ class UserController extends Controller
                 ], 401);
             }
 
-            $query = User::query();
-
-            // Tìm kiếm theo username hoặc nickname
+            $filters = [];
             if ($request->has('search')) {
-                $search = $request->input('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('username', 'like', "%{$search}%")
-                      ->orWhere('nickname', 'like', "%{$search}%");
-                });
+                $filters['search'] = $request->input('search');
             }
 
-            // Phân trang
-            $users = $query->select([
-                'id', 'username', 'nickname', 'avatar_url', 'bio', 'created_at'
-            ])->get();
+            $users = $this->userService->getUsers($filters);
+            
+            if ($users === false) {
+                return response()->json([
+                    'error' => 'Có lỗi xảy ra khi lấy danh sách người dùng'
+                ], 500);
+            }
 
             return response()->json([
                 'success' => true,
@@ -136,33 +108,17 @@ class UserController extends Controller
     public function getPublicProfile(int $userId): JsonResponse
     {
         try {
-            $user = User::find($userId);
-
-            if (!$user) {
+            $result = $this->userService->getPublicProfile($userId);
+            
+            if (!$result) {
                 return response()->json([
                     'error' => 'Người dùng không tồn tại'
                 ], 404);
             }
 
-            // Lấy thống kê
-            $followersCount = DB::table('followers')
-                ->where('followed_id', $userId)
-                ->where('status', 'accepted')
-                ->count();
-
-            $followingCount = DB::table('followers')
-                ->where('follower_id', $userId)
-                ->where('status', 'accepted')
-                ->count();
-
-            $postsCount = Post::where('user_id', $userId)->count();
-
-            // Lấy 3 posts gần nhất để preview
-            $recentPosts = Post::where('user_id', $userId)
-                ->with(['media.attachment'])
-                ->orderBy('created_at', 'desc')
-                ->take(3)
-                ->get();
+            $user = $result['user'];
+            $stats = $result['stats'];
+            $recentPosts = $result['recent_posts'];
 
             $profileData = [
                 'id' => $user->id,
@@ -171,11 +127,7 @@ class UserController extends Controller
                 'avatar_url' => $user->avatar_url,
                 'bio' => $user->bio,
                 'created_at' => $user->created_at,
-                'stats' => [
-                    'followers_count' => $followersCount,
-                    'following_count' => $followingCount,
-                    'posts_count' => $postsCount
-                ],
+                'stats' => $stats,
                 'recent_posts' => $recentPosts
             ];
 
@@ -205,22 +157,12 @@ class UserController extends Controller
                 ], 401);
             }
 
-            if ($currentUser->id === $targetUserId) {
+            $followStatus = $this->userService->getFollowStatus($currentUser->id, $targetUserId);
+            
+            if ($followStatus === false) {
                 return response()->json([
-                    'success' => true,
-                    'data' => 'self'
-                ]);
-            }
-
-            $following = DB::table('followers')
-                ->where('follower_id', $currentUser->id)
-                ->where('followed_id', $targetUserId)
-                ->first();
-
-            $followStatus = 'not_following';
-
-            if ($following) {
-                $followStatus = $following->status;
+                    'error' => 'Có lỗi xảy ra khi kiểm tra trạng thái follow'
+                ], 500);
             }
 
             return response()->json([
@@ -241,25 +183,13 @@ class UserController extends Controller
     public function getFollowers(int $userId): JsonResponse
     {
         try {
-            $user = User::find($userId);
-
-            if (!$user) {
+            $followers = $this->userService->getFollowers($userId);
+            
+            if ($followers === false) {
                 return response()->json([
                     'error' => 'Người dùng không tồn tại'
                 ], 404);
             }
-
-            $followers = $user->followers()
-                ->wherePivot('status', 'accepted')
-                ->get()
-                ->map(function ($follower) {
-                    return [
-                        'id' => $follower->id,
-                        'username' => $follower->username,
-                        'nickname' => $follower->nickname,
-                        'avatar_url' => $follower->avatar_url
-                    ];
-                });
 
             return response()->json([
                 'success' => true,
@@ -279,25 +209,13 @@ class UserController extends Controller
     public function getFollowing(int $userId): JsonResponse
     {
         try {
-            $user = User::find($userId);
-
-            if (!$user) {
+            $following = $this->userService->getFollowing($userId);
+            
+            if ($following === false) {
                 return response()->json([
                     'error' => 'Người dùng không tồn tại'
                 ], 404);
             }
-
-            $following = $user->followings()
-                ->wherePivot('status', 'accepted')
-                ->get()
-                ->map(function ($followed) {
-                    return [
-                        'id' => $followed->id,
-                        'username' => $followed->username,
-                        'nickname' => $followed->nickname,
-                        'avatar_url' => $followed->avatar_url
-                    ];
-                });
 
             return response()->json([
                 'success' => true,
@@ -311,41 +229,27 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Lấy tất cả bài đăng của một user
+     */
     public function getAllPostsByUser(int $userId): JsonResponse
     {
         try {
             $currentUser = auth()->user();
-            $isOwner = $currentUser && $currentUser->id == $userId;
-            $isFollower = false;
-            if ($currentUser && !$isOwner) {
-                $isFollower = DB::table('followers')
-                    ->where('follower_id', $currentUser->id)
-                    ->where('followed_id', $userId)
-                    ->where('status', 'accepted')
-                    ->exists();
+            $currentUserId = $currentUser ? $currentUser->id : 0;
+
+            $posts = $this->userService->getAllPostsByUser($userId, $currentUserId);
+            
+            if ($posts === false) {
+                return response()->json([
+                    'error' => 'Có lỗi xảy ra khi lấy bài đăng'
+                ], 500);
             }
-
-            $query = Post::where('user_id', $userId)
-                ->with('user', 'media.attachment');
-
-            if ($isOwner) {
-                // Xem được tất cả
-            } elseif ($isFollower) {
-                $query->whereIn('privacy', ['public', 'friends']);
-            } else {
-                $query->where('privacy', 'public');
-            }
-
-            $posts = $query->orderBy('created_at', 'desc')->get()
-                ->map(function ($post) use ($currentUser) {
-                    $post->likesCount = $post->reactions()->count();
-                    $post->liked = $currentUser ? $post->reactions()->where('user_id', $currentUser->id)->exists() : false;
-                    return $post;
-                });
 
             return response()->json([
                 'posts' => $posts
             ]);
+            
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error getting posts: ' . $e->getMessage()

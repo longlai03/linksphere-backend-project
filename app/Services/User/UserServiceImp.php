@@ -3,6 +3,7 @@
 namespace App\Services\User;
 
 use App\Models\User;
+use App\Models\Post;
 use App\Models\VerificationCode;
 use App\Repositories\User\UserRepository;
 use App\Services\Base\BaseServiceImp;
@@ -216,6 +217,109 @@ class UserServiceImp extends BaseServiceImp implements UserService
             return true;
         } catch (Exception $e) {
             logger()->error('Error resetPassword: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    // New methods for UserController
+    public function getUserById(int $userId): mixed
+    {
+        try {
+            $result = $this->userRepository->getUserById($userId);
+            if (!$result) {
+                return false;
+            }
+
+            $user = $result['user'];
+            $stats = $result['stats'];
+
+            // Kiểm tra xem user hiện tại có đang follow user này không
+            $currentUser = auth()->user();
+            $isFollowing = false;
+            $followStatus = null;
+
+            if ($currentUser && $currentUser->id !== $userId) {
+                $followStatus = $this->userRepository->getFollowStatus($currentUser->id, $userId);
+                $isFollowing = $followStatus === 'accepted';
+            }
+
+            return [
+                'user' => $user,
+                'stats' => $stats,
+                'is_following' => $isFollowing,
+                'follow_status' => $followStatus
+            ];
+        } catch (Exception $e) {
+            logger()->error('Error getUserById: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getUsers(array $filters): mixed
+    {
+        try {
+            return $this->userRepository->getUsers($filters);
+        } catch (Exception $e) {
+            logger()->error('Error getUsers: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getPublicProfile(int $userId): mixed
+    {
+        try {
+            return $this->userRepository->getPublicProfile($userId);
+        } catch (Exception $e) {
+            logger()->error('Error getPublicProfile: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getFollowStatus(int $currentUserId, int $targetUserId): mixed
+    {
+        try {
+            return $this->userRepository->getFollowStatus($currentUserId, $targetUserId);
+        } catch (Exception $e) {
+            logger()->error('Error getFollowStatus: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getFollowers(int $userId): mixed
+    {
+        try {
+            return $this->userRepository->getFollowers($userId);
+        } catch (Exception $e) {
+            logger()->error('Error getFollowers: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getFollowing(int $userId): mixed
+    {
+        try {
+            return $this->userRepository->getFollowing($userId);
+        } catch (Exception $e) {
+            logger()->error('Error getFollowing: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getAllPostsByUser(int $userId, int $currentUserId): mixed
+    {
+        try {
+            $posts = $this->userRepository->getAllPostsByUser($userId, $currentUserId);
+            
+            // Thêm thông tin likes và liked status
+            $posts = $posts->map(function ($post) use ($currentUserId) {
+                $post->likesCount = $post->reactions()->count();
+                $post->liked = $currentUserId ? $post->reactions()->where('user_id', $currentUserId)->exists() : false;
+                return $post;
+            });
+
+            return $posts;
+        } catch (Exception $e) {
+            logger()->error('Error getAllPostsByUser: ' . $e->getMessage());
             return false;
         }
     }
