@@ -16,6 +16,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name
 Route::post('/forgot-password/send-code', [AuthController::class, 'sendResetCode']);
 Route::post('/forgot-password/verify-code', [AuthController::class, 'verifyResetCode']);
 Route::post('/forgot-password/reset', [AuthController::class, 'resetPassword']);
+Route::post('/refresh', [AuthController::class, 'refreshToken']);
 
 Route::middleware('auth:api')->group(function () {
     //auth
@@ -67,4 +68,5 @@ Route::middleware('auth:api')->group(function () {
     
     // Search users for messaging
     Route::get('/users/search-for-messages', [ConversationController::class, 'searchUsers']);
+
 });

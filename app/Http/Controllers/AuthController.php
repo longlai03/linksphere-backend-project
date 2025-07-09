@@ -4,15 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Helpers\AvatarHelper;
 use App\Http\Requests\UserRequest;
-use App\Models\Post;
-use App\Models\User;
 use App\Services\User\UserService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class AuthController extends Controller
 {
@@ -30,7 +28,7 @@ class AuthController extends Controller
             if (!$register) {
                 return response()->json([
                     'error' => 'Lỗi đăng ký'
-                ], 401);
+                ], 400);
             }
             return response()->json([
                 'message' => 'Register successfully',
@@ -51,7 +49,7 @@ class AuthController extends Controller
             if (!$login) {
                 return response()->json([
                     'error' => 'Thông tin đăng nhập không hợp lệ'
-                ], 401);
+                ], 400);
             }
             return response()->json([
                 'message' => 'Login successfully',
@@ -214,7 +212,7 @@ class AuthController extends Controller
             if (!empty($updateData['avatar_url'])) {
                 try {
                     $updateData['avatar_url'] = AvatarHelper::processAvatarBase64(
-                        $updateData['avatar_url'], 
+                        $updateData['avatar_url'],
                         $user->avatar_url
                     );
                 } catch (Exception $e) {
@@ -260,6 +258,27 @@ class AuthController extends Controller
             return response()->json([
                 'error' => 'Error getting user: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Làm mới access token từ refresh token
+     */
+    public function refreshToken(Request $request): JsonResponse
+    {
+        try {
+            $oldToken = JWTAuth::getToken();
+            if (!$oldToken) {
+                return response()->json(['error' => 'Token not provided'], 401);
+            }
+            $newToken = JWTAuth::refresh($oldToken);
+            return response()->json([
+                'token' => $newToken
+            ]);
+        } catch (TokenInvalidException $e) {
+            return response()->json(['error' => 'Invalid token'], 401);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Could not refresh token: ' . $e->getMessage()], 500);
         }
     }
 }

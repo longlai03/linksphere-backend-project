@@ -31,7 +31,6 @@ class UserController extends Controller
             }
 
             $user = $result['user'];
-            $stats = $result['stats'];
             $isFollowing = $result['is_following'];
             $followStatus = $result['follow_status'];
 
@@ -45,8 +44,8 @@ class UserController extends Controller
                 'birthday' => $user->birthday,
                 'address' => $user->address,
                 'hobbies' => $user->hobbies,
+                'phone' => $user->phone,
                 'created_at' => $user->created_at,
-                'stats' => $stats,
                 'is_following' => $isFollowing,
                 'follow_status' => $followStatus
             ];
@@ -127,6 +126,7 @@ class UserController extends Controller
                 'avatar_url' => $user->avatar_url,
                 'bio' => $user->bio,
                 'created_at' => $user->created_at,
+                'phone' => $user->phone,
                 'stats' => $stats,
                 'recent_posts' => $recentPosts
             ];

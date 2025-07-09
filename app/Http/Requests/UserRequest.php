@@ -46,6 +46,7 @@ class UserRequest extends FormRequest
                 'address' => 'nullable|string',
                 'bio' => 'nullable|string',
                 'hobbies' => 'nullable|string',
+                'phone' => 'nullable|string|max:20',
             ];
         }
         return [

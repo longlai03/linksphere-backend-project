@@ -89,7 +89,7 @@ class PostController extends Controller
             if ($post === false) {
                 return response()->json([
                     'error' => 'Post not found or you are not authorized to update this post.'
-                ], 404);
+                ], 403);
             }
 
             return response()->json([
@@ -121,7 +121,7 @@ class PostController extends Controller
             if ($result === false) {
                 return response()->json([
                     'error' => 'Post not found or you are not authorized to delete this post.'
-                ], 404);
+                ], 403);
             }
 
             return response()->json([
