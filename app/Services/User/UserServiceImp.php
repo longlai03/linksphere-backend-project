@@ -323,4 +323,14 @@ class UserServiceImp extends BaseServiceImp implements UserService
             return false;
         }
     }
+
+    public function getSuggestionUser(int $currentUserId): mixed
+    {
+        try {
+            return $this->userRepository->getSuggestionUser($currentUserId);
+        } catch (Exception $e) {
+            logger()->error('Error getSuggestionUser: ' . $e->getMessage());
+            return false;
+        }
+    }
 }

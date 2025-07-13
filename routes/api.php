@@ -32,6 +32,7 @@ Route::middleware('auth:api')->group(function () {
 
     // User routes
     Route::get('/users', [UserController::class, 'getUsers']);
+    Route::get('/users/suggestions', [UserController::class, 'getSuggestionUser']);
     Route::get('/users/{userId}', [UserController::class, 'getUserById']);
     Route::get('/users/{userId}/profile', [UserController::class, 'getPublicProfile']);
     Route::get('/users/{userId}/follow-status', [UserController::class, 'getFollowStatus']);

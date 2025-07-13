@@ -6,6 +6,7 @@ use App\Services\User\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -63,7 +64,7 @@ class UserController extends Controller
     }
 
     /**
-     * Lấy danh sách người dùng (có thể dùng để tìm kiếm)
+     * Lấy danh sách người dùng
      */
     public function getUsers(Request $request): JsonResponse
     {
@@ -149,7 +150,7 @@ class UserController extends Controller
     public function getFollowStatus(int $targetUserId): JsonResponse
     {
         try {
-            $currentUser = auth()->user();
+            $currentUser = Auth::user();
 
             if (!$currentUser) {
                 return response()->json([
@@ -235,7 +236,7 @@ class UserController extends Controller
     public function getAllPostsByUser(int $userId): JsonResponse
     {
         try {
-            $currentUser = auth()->user();
+            $currentUser = Auth::user();
             $currentUserId = $currentUser ? $currentUser->id : 0;
 
             $posts = $this->userService->getAllPostsByUser($userId, $currentUserId);
@@ -253,6 +254,40 @@ class UserController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error getting posts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Lấy danh sách gợi ý kết bạn
+     */
+    public function getSuggestionUser(): JsonResponse
+    {
+        try {
+            $currentUser = Auth::user();
+
+            if (!$currentUser) {
+                return response()->json([
+                    'error' => 'Unauthorized'
+                ], 401);
+            }
+
+            $suggestions = $this->userService->getSuggestionUser($currentUser->id);
+            
+            if ($suggestions === false) {
+                return response()->json([
+                    'error' => 'Có lỗi xảy ra khi lấy danh sách gợi ý kết bạn'
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $suggestions
+            ]);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'error' => 'Có lỗi xảy ra: ' . $e->getMessage()
             ], 500);
         }
     }

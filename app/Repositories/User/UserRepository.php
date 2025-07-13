@@ -20,4 +20,5 @@ interface UserRepository extends BaseRepository
     public function getFollowers(int $userId): mixed;
     public function getFollowing(int $userId): mixed;
     public function getAllPostsByUser(int $userId, int $currentUserId): mixed;
+    public function getSuggestionUser(int $currentUserId): mixed;
 }

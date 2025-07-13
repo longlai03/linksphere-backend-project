@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Repositories\Base\BaseRepositoryElq;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Exception;
 
 class UserRepositoryElq extends BaseRepositoryElq implements UserRepository
 {
@@ -95,6 +96,9 @@ class UserRepositoryElq extends BaseRepositoryElq implements UserRepository
                 $q->where('username', 'like', "%{$search}%")
                   ->orWhere('nickname', 'like', "%{$search}%");
             });
+        } else {
+            // Nếu không có search, lấy 10 user đầu tiên
+            $query->limit(10);
         }
 
         return $query->select([
@@ -122,13 +126,6 @@ class UserRepositoryElq extends BaseRepositoryElq implements UserRepository
 
         $postsCount = Post::where('user_id', $userId)->count();
 
-        // Lấy 3 posts gần nhất để preview
-        $recentPosts = Post::where('user_id', $userId)
-            ->with(['media.attachment'])
-            ->orderBy('created_at', 'desc')
-            ->take(3)
-            ->get();
-
         return [
             'user' => $user,
             'stats' => [
@@ -136,7 +133,6 @@ class UserRepositoryElq extends BaseRepositoryElq implements UserRepository
                 'following_count' => $followingCount,
                 'posts_count' => $postsCount
             ],
-            'recent_posts' => $recentPosts
         ];
     }
 
@@ -219,5 +215,38 @@ class UserRepositoryElq extends BaseRepositoryElq implements UserRepository
         }
 
         return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    public function getSuggestionUser(int $currentUserId): mixed
+    {
+        try {
+            // Lấy danh sách user IDs mà current user đã follow
+            $followingUserIds = DB::table('followers')
+                ->where('follower_id', $currentUserId)
+                ->pluck('followed_id')
+                ->toArray();
+
+            // Lấy danh sách user IDs đã follow current user
+            $followedByUserIds = DB::table('followers')
+                ->where('followed_id', $currentUserId)
+                ->pluck('follower_id')
+                ->toArray();
+
+            // Gộp tất cả user IDs cần loại trừ
+            $excludeUserIds = array_merge([$currentUserId], $followingUserIds, $followedByUserIds);
+
+            // Query trực tiếp với điều kiện loại trừ và limit
+            $suggestions = User::whereNotIn('id', $excludeUserIds)
+                ->select([
+                    'id', 'username', 'nickname', 'avatar_url', 'bio', 'created_at'
+                ])
+                ->limit(10)
+                ->get();
+
+            return $suggestions;
+        } catch (Exception $e) {
+            logger()->error('Error getSuggestionUser: ' . $e->getMessage());
+            return false;
+        }
     }
 }

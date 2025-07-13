@@ -8,6 +8,7 @@ use App\Services\User\UserService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
@@ -192,7 +193,7 @@ class AuthController extends Controller
 
     public function updateUser(UserRequest $request, int $userId): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         if (!$user) {
             return response()->json([

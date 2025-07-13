@@ -7,6 +7,7 @@ use App\Services\Post\PostService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
@@ -49,9 +50,9 @@ class PostController extends Controller
     public function show(int $postId): JsonResponse
     {
         try {
-            $currentUser = auth()->user();
+            $currentUser = Auth::user();
             $currentUserId = $currentUser ? $currentUser->id : 0;
-            
+
             $post = $this->postService->getPostById($postId, $currentUserId);
 
             if (!$post) {
@@ -76,7 +77,7 @@ class PostController extends Controller
     public function update(PostRequest $request, int $postId): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user) {
                 return response()->json([
                     'error' => 'Unauthorized: No user found'
@@ -109,7 +110,7 @@ class PostController extends Controller
     public function destroy(int $postId): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user) {
                 return response()->json([
                     'error' => 'Unauthorized: No user found'
@@ -140,7 +141,7 @@ class PostController extends Controller
     public function getFeedPost(Request $request): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user) {
                 return response()->json([
                     'error' => 'Unauthorized: No user found'
@@ -176,7 +177,7 @@ class PostController extends Controller
     public function like(int $postId): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user) {
                 return response()->json([
                     'error' => 'Unauthorized: No user found'
@@ -196,7 +197,6 @@ class PostController extends Controller
                 'likes_count' => $result['likes_count'],
                 'is_liked' => $result['is_liked']
             ]);
-
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error liking post: ' . $e->getMessage()
@@ -210,7 +210,7 @@ class PostController extends Controller
     public function unlike(int $postId): JsonResponse
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user) {
                 return response()->json([
                     'error' => 'Unauthorized: No user found'
@@ -230,7 +230,6 @@ class PostController extends Controller
                 'likes_count' => $result['likes_count'],
                 'is_liked' => $result['is_liked']
             ]);
-
         } catch (Exception $e) {
             return response()->json([
                 'error' => 'Error unliking post: ' . $e->getMessage()
