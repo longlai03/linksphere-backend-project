@@ -30,35 +30,34 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/post/{id}/like', [PostController::class, 'like']);
     Route::delete('/post/{id}/like', [PostController::class, 'unlike']);
 
-    // User routes
+    //user
     Route::get('/users', [UserController::class, 'getUsers']);
     Route::get('/users/suggestions', [UserController::class, 'getSuggestionUser']);
     Route::get('/users/{userId}', [UserController::class, 'getUserById']);
-    Route::get('/users/{userId}/profile', [UserController::class, 'getPublicProfile']);
     Route::get('/users/{userId}/follow-status', [UserController::class, 'getFollowStatus']);
     Route::get('/users/{userId}/followers', [UserController::class, 'getFollowers']);
     Route::get('/users/{userId}/following', [UserController::class, 'getFollowing']);
 
-    // Follower routes
+    //follower
     Route::post('/user/{userId}/follow', [FollowerController::class, 'follow']);
     Route::post('/user/{userId}/unfollow', [FollowerController::class, 'unfollow']);
     Route::post('/accept-follow', [FollowerController::class, 'acceptFollow']);
     Route::post('/decline-follow', [FollowerController::class, 'declineFollow']);
     Route::get('/pending-follow-requests', [FollowerController::class, 'getPendingFollowRequests']);
 
-    // Comment routes
+    //comment
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
     Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
     Route::put('/comments/{comment}', [CommentController::class, 'update']);
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     Route::get('/comments/{comment}/replies', [CommentController::class, 'getReplies']);
 
-    // Notification routes
+    //notification
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::delete('/notifications/by-sender', [NotificationController::class, 'deleteBySenderAndType']);
 
-    // Conversation (Chat) routes
+    //conversation
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::get('/conversations/{conversationId}', [ConversationController::class, 'show']);
     Route::get('/conversations/{userId}/direct', [ConversationController::class, 'getOrCreateDirect']);
@@ -66,8 +65,5 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/conversations/{conversationId}/messages', [ConversationController::class, 'sendMessage']);
     Route::post('/conversations/{conversationId}/read', [ConversationController::class, 'markAsRead']);
     Route::delete('/conversations/{conversationId}', [ConversationController::class, 'destroy']);
-    
-    // Search users for messaging
     Route::get('/users/search-for-messages', [ConversationController::class, 'searchUsers']);
-
 });

@@ -17,9 +17,6 @@ class CommentRepositoryElq implements CommentRepository
         $this->postModel = $post;
     }
 
-    /**
-     * Lấy danh sách comment của một post
-     */
     public function getCommentsByPostId(int $postId): Collection
     {
         return $this->commentModel->where('post_id', $postId)
@@ -29,17 +26,11 @@ class CommentRepositoryElq implements CommentRepository
             ->get();
     }
 
-    /**
-     * Lấy comment theo ID
-     */
     public function findById(int $id): ?Comments
     {
         return $this->commentModel->find($id);
     }
 
-    /**
-     * Lấy comment theo ID và user_id
-     */
     public function findByIdAndUserId(int $id, int $userId): ?Comments
     {
         return $this->commentModel->where('id', $id)
@@ -47,33 +38,21 @@ class CommentRepositoryElq implements CommentRepository
             ->first();
     }
 
-    /**
-     * Tạo comment mới
-     */
     public function create(array $data): Comments
     {
         return $this->commentModel->create($data);
     }
 
-    /**
-     * Cập nhật comment
-     */
     public function update(Comments $comment, array $data): bool
     {
         return $comment->update($data);
     }
 
-    /**
-     * Xóa comment
-     */
     public function delete(Comments $comment): bool
     {
         return $comment->delete();
     }
 
-    /**
-     * Lấy danh sách reply của một comment
-     */
     public function getRepliesByCommentId(int $commentId): Collection
     {
         return $this->commentModel->where('reply_comment_id', $commentId)
@@ -82,18 +61,12 @@ class CommentRepositoryElq implements CommentRepository
             ->get();
     }
 
-    /**
-     * Kiểm tra comment có thuộc về post không
-     */
     public function isCommentBelongsToPost(int $commentId, int $postId): bool
     {
         $comment = $this->commentModel->find($commentId);
         return $comment && $comment->post_id === $postId;
     }
 
-    /**
-     * Lấy post theo ID
-     */
     public function findPostById(int $postId): ?Post
     {
         return $this->postModel->find($postId);

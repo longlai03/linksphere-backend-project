@@ -46,23 +46,18 @@ class RepositoryServiceProvider extends ServiceProvider
         // User bindings
         $this->app->bind(UserRepository::class, UserRepositoryElq::class);
         $this->app->bind(UserService::class, UserServiceImp::class);
-        
         // Post bindings
         $this->app->bind(PostRepository::class, PostRepositoryElq::class);
         $this->app->bind(PostService::class, PostServiceImp::class);
-        
         // Follower bindings
         $this->app->bind(FollowerRepository::class, FollowerRepositoryElq::class);
         $this->app->bind(FollowerService::class, FollowerServiceImp::class);
-        
         // Notification bindings
         $this->app->bind(NotificationRepository::class, NotificationRepositoryElq::class);
         $this->app->bind(NotificationService::class, NotificationServiceImp::class);
-
         // Comment bindings
         $this->app->bind(CommentRepository::class, CommentRepositoryElq::class);
         $this->app->bind(CommentService::class, CommentServiceImp::class);
-
         // Conversation bindings
         $this->app->bind(ConversationRepository::class, ConversationRepositoryElq::class);
         $this->app->bind(ConversationService::class, ConversationServiceImp::class);

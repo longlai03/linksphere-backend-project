@@ -5,6 +5,7 @@ namespace App\Services\Conversation;
 use App\Repositories\Conversation\ConversationRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Exception;
 
 class ConversationServiceImp implements ConversationService
 {
@@ -25,7 +26,7 @@ class ConversationServiceImp implements ConversationService
                 return [
                     'id' => $chat->id,
                     'type' => 'direct',
-                    'name' => $participant ? $participant->nickname : 'Người dùng',
+                    'name' => $participant ? $participant->username : 'Người dùng',
                     'avatar' => $participant ? $participant->avatar_url : null,
                     'last_message' => $lastMessage ? [
                         'id' => $lastMessage->id,
@@ -50,7 +51,7 @@ class ConversationServiceImp implements ConversationService
                 'success' => true,
                 'data' => $conversations
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -131,9 +132,6 @@ class ConversationServiceImp implements ConversationService
         if (!$chat) {
             return ['success' => false, 'error' => 'Conversation not found'];
         }
-        if (!$this->conversationRepository->canAccessChat($chat, $userId)) {
-            return ['success' => false, 'error' => 'Forbidden'];
-        }
         $messages = $this->conversationRepository->getConversationMessages($conversationId);
         $this->conversationRepository->markMessagesAsRead($conversationId, $userId);
         return [
@@ -147,9 +145,6 @@ class ConversationServiceImp implements ConversationService
         $chat = $this->conversationRepository->findConversationById($conversationId);
         if (!$chat) {
             return ['success' => false, 'error' => 'Conversation not found'];
-        }
-        if (!$this->conversationRepository->canAccessChat($chat, $userId)) {
-            return ['success' => false, 'error' => 'Forbidden'];
         }
         $validator = Validator::make($data, [
             'content' => 'required_without:attachment_id|string|max:1000',
@@ -172,7 +167,7 @@ class ConversationServiceImp implements ConversationService
                 'message' => 'Message sent successfully',
                 'data' => $message
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             return [
                 'success' => false,
@@ -188,55 +183,10 @@ class ConversationServiceImp implements ConversationService
         if (!$chat) {
             return ['success' => false, 'error' => 'Conversation not found'];
         }
-        if (!$this->conversationRepository->canAccessChat($chat, $userId)) {
-            return ['success' => false, 'error' => 'Forbidden'];
-        }
         $this->conversationRepository->markMessagesAsRead($conversationId, $userId);
         return [
             'success' => true,
             'message' => 'Messages marked as read'
         ];
-    }
-
-    public function searchUsers(int $userId, string $query): array
-    {
-        if (strlen($query) < 2) {
-            return [
-                'success' => true,
-                'data' => []
-            ];
-        }
-        $users = $this->conversationRepository->searchUsers($userId, $query);
-        return [
-            'success' => true,
-            'data' => $users
-        ];
-    }
-
-    public function deleteConversation(int $conversationId, int $userId): array
-    {
-        $chat = $this->conversationRepository->findConversationById($conversationId);
-        if (!$chat) {
-            return ['success' => false, 'error' => 'Conversation not found'];
-        }
-        if ($chat->create_by !== $userId) {
-            return ['success' => false, 'error' => 'Forbidden'];
-        }
-        DB::beginTransaction();
-        try {
-            $this->conversationRepository->deleteConversation($conversationId);
-            DB::commit();
-            return [
-                'success' => true,
-                'message' => 'Conversation deleted successfully'
-            ];
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return [
-                'success' => false,
-                'message' => 'Error deleting conversation',
-                'error' => $e->getMessage()
-            ];
-        }
     }
 }

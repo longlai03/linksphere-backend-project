@@ -3,14 +3,13 @@
 namespace App\Services\User;
 
 use App\Models\User;
-use App\Models\Post;
 use App\Models\VerificationCode;
 use App\Repositories\User\UserRepository;
 use App\Services\Base\BaseServiceImp;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 
@@ -66,7 +65,6 @@ class UserServiceImp extends BaseServiceImp implements UserService
     public function getUserByToken(string $token): array|false
     {
         try {
-            // Sử dụng JWTAuth để set token và lấy user
             $user = app('tymon.jwt.auth')->setToken($token)->toUser();
             if (!$user) {
                 return false;
@@ -77,7 +75,7 @@ class UserServiceImp extends BaseServiceImp implements UserService
         } catch (JWTException $e) {
             logger()->error('JWT Error: ' . $e->getMessage());
             return false;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             logger()->error('Error getUserByToken: ' . $e->getMessage());
             return false;
         }
@@ -131,11 +129,9 @@ class UserServiceImp extends BaseServiceImp implements UserService
                 return false;
             }
 
-            // Tạo mã xác thực mới
             $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expiresAt = now()->addMinutes(15); // Mã hết hạn sau 15 phút
+            $expiresAt = now()->addMinutes(15);
 
-            // Lưu mã vào database
             VerificationCode::create([
                 'user_id' => $user->id,
                 'code' => $code,
@@ -143,8 +139,6 @@ class UserServiceImp extends BaseServiceImp implements UserService
                 'expires_at' => $expiresAt,
             ]);
             logger()->error('call me');
-
-            // Gửi email chứa mã xác thực
             Mail::send('emails.password-reset', ['code' => $code], function ($message) use ($email) {
                 $message->to($email)
                     ->subject('Đặt lại mật khẩu');
@@ -171,14 +165,10 @@ class UserServiceImp extends BaseServiceImp implements UserService
                 ->where('expires_at', '>', now())
                 ->latest()
                 ->first();
-
             if (!$verificationCode) {
                 return false;
             }
-
-            // Đánh dấu mã đã được xác thực
             $verificationCode->update(['is_verified' => true]);
-
             return true;
         } catch (Exception $e) {
             logger()->error('Error verifyCode: ' . $e->getMessage());
@@ -193,7 +183,6 @@ class UserServiceImp extends BaseServiceImp implements UserService
             if (!$user) {
                 return false;
             }
-
             $verificationCode = VerificationCode::where('user_id', $user->id)
                 ->where('code', $code)
                 ->where('type', 'password_reset')
@@ -201,19 +190,13 @@ class UserServiceImp extends BaseServiceImp implements UserService
                 ->where('expires_at', '>', now())
                 ->latest()
                 ->first();
-
             if (!$verificationCode) {
                 return false;
             }
-
-            // Cập nhật mật khẩu mới
             $user->update([
                 'password' => Hash::make($password)
             ]);
-
-            // Xóa mã xác thực đã sử dụng
             $verificationCode->delete();
-
             return true;
         } catch (Exception $e) {
             logger()->error('Error resetPassword: ' . $e->getMessage());
@@ -221,7 +204,6 @@ class UserServiceImp extends BaseServiceImp implements UserService
         }
     }
 
-    // New methods for UserController
     public function getUserById(int $userId): mixed
     {
         try {
@@ -229,20 +211,15 @@ class UserServiceImp extends BaseServiceImp implements UserService
             if (!$result) {
                 return false;
             }
-
             $user = $result['user'];
             $stats = $result['stats'];
-
-            // Kiểm tra xem user hiện tại có đang follow user này không
-            $currentUser = auth()->user();
+            $currentUser = Auth::user();
             $isFollowing = false;
             $followStatus = null;
-
             if ($currentUser && $currentUser->id !== $userId) {
                 $followStatus = $this->userRepository->getFollowStatus($currentUser->id, $userId);
                 $isFollowing = $followStatus === 'accepted';
             }
-
             return [
                 'user' => $user,
                 'stats' => $stats,
@@ -309,14 +286,11 @@ class UserServiceImp extends BaseServiceImp implements UserService
     {
         try {
             $posts = $this->userRepository->getAllPostsByUser($userId, $currentUserId);
-            
-            // Thêm thông tin likes và liked status
             $posts = $posts->map(function ($post) use ($currentUserId) {
                 $post->likesCount = $post->reactions()->count();
                 $post->liked = $currentUserId ? $post->reactions()->where('user_id', $currentUserId)->exists() : false;
                 return $post;
             });
-
             return $posts;
         } catch (Exception $e) {
             logger()->error('Error getAllPostsByUser: ' . $e->getMessage());

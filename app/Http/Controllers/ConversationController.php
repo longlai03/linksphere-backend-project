@@ -16,10 +16,7 @@ class ConversationController extends Controller
         $this->conversationService = $conversationService;
     }
 
-    /**
-     * Lấy danh sách các cuộc trò chuyện của user hiện tại
-     */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
         $user = Auth::user();
         if (!$user) {
@@ -33,9 +30,6 @@ class ConversationController extends Controller
         }
     }
 
-    /**
-     * Lấy chi tiết 1 cuộc trò chuyện
-     */
     public function show($conversationId): JsonResponse
     {
         $user = Auth::user();
@@ -51,9 +45,6 @@ class ConversationController extends Controller
         }
     }
 
-    /**
-     * Lấy hoặc tạo cuộc trò chuyện trực tiếp với 1 user
-     */
     public function getOrCreateDirect($userId): JsonResponse
     {
         $user = Auth::user();
@@ -69,10 +60,7 @@ class ConversationController extends Controller
         }
     }
 
-    /**
-     * Lấy danh sách tin nhắn của 1 cuộc trò chuyện
-     */
-    public function getMessages(Request $request, $conversationId): JsonResponse
+    public function getMessages($conversationId): JsonResponse
     {
         $user = Auth::user();
         if (!$user) {
@@ -87,9 +75,6 @@ class ConversationController extends Controller
         }
     }
 
-    /**
-     * Gửi tin nhắn trong 1 cuộc trò chuyện
-     */
     public function sendMessage(Request $request, $conversationId): JsonResponse
     {
         $user = Auth::user();
@@ -105,9 +90,6 @@ class ConversationController extends Controller
         }
     }
 
-    /**
-     * Đánh dấu tin nhắn đã đọc
-     */
     public function markAsRead($conversationId): JsonResponse
     {
         $user = Auth::user();
@@ -120,38 +102,6 @@ class ConversationController extends Controller
         } else {
             $status = $result['error'] === 'Forbidden' ? 403 : 404;
             return response()->json(['error' => $result['error']], $status);
-        }
-    }
-
-    /**
-     * Tìm kiếm user để nhắn tin
-     */
-    public function searchUsers(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-        $query = $request->get('q', '');
-        $result = $this->conversationService->searchUsers($user->id, $query);
-        return response()->json($result);
-    }
-
-    /**
-     * Xóa cuộc trò chuyện
-     */
-    public function destroy($conversationId): JsonResponse
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-        $result = $this->conversationService->deleteConversation($conversationId, $user->id);
-        if ($result['success']) {
-            return response()->json($result);
-        } else {
-            $status = $result['error'] === 'Forbidden' ? 403 : 404;
-            return response()->json($result, $status);
         }
     }
 } 

@@ -6,6 +6,7 @@ use App\Services\Base\BaseService;
 
 interface UserService extends BaseService
 {
+    //Auth
     public function loginUser(array $attributes): mixed;
     public function registerUser(array $attributes): mixed;
     public function getUserByToken(string $token): mixed;
@@ -16,8 +17,7 @@ interface UserService extends BaseService
     public function sendVerificationCode(string $email): bool;
     public function verifyCode(string $email, string $code): bool;
     public function resetPassword(string $email, string $code, string $password): bool;
-    
-    // New methods for UserController
+    //User
     public function getUserById(int $userId): mixed;
     public function getUsers(array $filters): mixed;
     public function getPublicProfile(int $userId): mixed;

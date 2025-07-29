@@ -19,12 +19,12 @@ class Attachment extends Model
         'size',
         'uploaded_at',
     ];
-    // Quan hệ đến User (người upload file)
+    // Quan hệ đến User
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-    // Quan hệ đến PostMedia (media chứa file)
+    // Quan hệ đến PostMedia
     public function postMedia(): BelongsTo
     {
         return $this->belongsTo(PostMedia::class);

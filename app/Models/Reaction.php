@@ -10,10 +10,7 @@ class Reaction extends Model
 {
     use HasFactory;
     protected $table = 'reaction';
-
     public $timestamps = false;
-    
-    // Sử dụng auto-incrementing ID
     public $incrementing = true;
 
     protected $fillable = [
@@ -21,13 +18,11 @@ class Reaction extends Model
         'post_id',
     ];
 
-    // Reaction thuộc về User nào
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Reaction thuộc về Post nào
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);

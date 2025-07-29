@@ -3,8 +3,8 @@
 namespace App\Repositories\Follower;
 
 use App\Models\User;
-use App\Models\Notification;
 use App\Repositories\Base\BaseRepositoryElq;
+use App\Services\Notification\NotificationService;
 use Exception;
 
 class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerRepository
@@ -19,22 +19,17 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
         try {
             $follower = User::find($followerId);
             $followed = User::find($followedId);
-
             if (!$follower || !$followed) {
                 return false;
             }
-
-            // Tạo yêu cầu theo dõi mới
             $follower->followings()->attach($followedId, [
                 'status' => 'pending',
                 'request_at' => now()
             ]);
-
-            // Tạo thông báo cho người được theo dõi
             $this->createNotification(
                 $followerId,
                 $followedId,
-                "{$follower->nickname} đã gửi yêu cầu theo dõi bạn",
+                "đã gửi yêu cầu theo dõi bạn",
                 'follow_request'
             );
 
@@ -49,35 +44,26 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
         try {
             $user = User::find($userId);
             $follower = User::find($followerId);
-
             if (!$user || !$follower) {
                 return false;
             }
-
-            // Kiểm tra yêu cầu theo dõi đang chờ
             $follow = $user->followers()
                 ->where('follower_id', $followerId)
                 ->wherePivot('status', 'pending')
                 ->first();
-
             if (!$follow) {
                 return false;
             }
-
-            // Cập nhật trạng thái follow
             $user->followers()->updateExistingPivot($followerId, [
                 'status' => 'accepted',
                 'respond_at' => now()
             ]);
-
-            // Tạo thông báo cho người theo dõi
             $this->createNotification(
                 $userId,
                 $followerId,
-                "{$user->nickname} đã chấp nhận yêu cầu theo dõi của bạn",
+                "đã chấp nhận yêu cầu theo dõi của bạn",
                 'follow_accepted'
             );
-
             return true;
         } catch (Exception $e) {
             throw new Exception('Error accepting follow request: ' . $e->getMessage());
@@ -89,27 +75,20 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
         try {
             $user = User::find($userId);
             $follower = User::find($followerId);
-
             if (!$user || !$follower) {
                 return false;
             }
-
-            // Kiểm tra yêu cầu theo dõi đang chờ
             $follow = $user->followers()
                 ->where('follower_id', $followerId)
                 ->wherePivot('status', 'pending')
                 ->first();
-
             if (!$follow) {
                 return false;
             }
-
-            // Cập nhật trạng thái follow
             $user->followers()->updateExistingPivot($followerId, [
                 'status' => 'declined',
                 'respond_at' => now()
             ]);
-
             return true;
         } catch (Exception $e) {
             throw new Exception('Error declining follow request: ' . $e->getMessage());
@@ -125,10 +104,7 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
             if (!$follower || !$followed) {
                 return false;
             }
-
-            // Sử dụng Eloquent relationship để xóa
             $detached = $follower->followings()->detach($followedId);
-
             return $detached > 0;
         } catch (Exception $e) {
             throw new Exception('Error unfollowing user: ' . $e->getMessage());
@@ -142,7 +118,6 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
             if (!$user) {
                 return false;
             }
-
             return $user->followers()
                 ->wherePivot('status', 'pending')
                 ->get()
@@ -167,7 +142,6 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
             if (!$follower) {
                 return false;
             }
-
             return $follower->followings()
                 ->where('followed_id', $followedId)
                 ->first();
@@ -179,12 +153,8 @@ class FollowerRepositoryElq extends BaseRepositoryElq implements FollowerReposit
     public function createNotification(int $senderId, int $receiverId, string $content, string $type): mixed
     {
         try {
-            $receiver = User::find($receiverId);
-            if (!$receiver) {
-                return false;
-            }
-
-            return $receiver->notifications()->create([
+            return app(NotificationService::class)->createNotification([
+                'user_id' => $receiverId,
                 'sender_id' => $senderId,
                 'content' => $content,
                 'type' => $type,

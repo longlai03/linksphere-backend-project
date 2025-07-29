@@ -18,35 +18,33 @@ class Comments extends Model
         'content',
     ];
 
-    // Comment thuộc về Post nào
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
     }
 
-    // Comment thuộc về User nào
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Reply comment (cha) của comment này
+    // Reply comment (cha) của comment
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Comments::class, 'reply_comment_id');
     }
 
-    // Các reply (con) của comment này
+    // Các reply (con) của comment
     public function replies(): HasMany
     {
         return $this->hasMany(Comments::class, 'reply_comment_id');
     }
 
+    // Xóa tất cả replies của comment này
     protected static function boot()
     {
         parent::boot();
         static::deleting(function ($comment) {
-            // Xóa tất cả replies của comment này (đệ quy)
             foreach ($comment->replies as $reply) {
                 $reply->delete();
             }

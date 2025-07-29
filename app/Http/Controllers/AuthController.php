@@ -84,7 +84,6 @@ class AuthController extends Controller
             $request->validate([
                 'identity' => 'required|string',
             ]);
-
             $result = $this->userService->sendVerificationCode($request->input('identity'));
             if ($result) {
                 return response()->json([
@@ -102,9 +101,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Gửi mã xác thực về email
-     */
     public function sendResetCode(Request $request): JsonResponse
     {
         try {
@@ -129,9 +125,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Xác thực mã xác thực
-     */
     public function verifyResetCode(Request $request): JsonResponse
     {
         try {
@@ -157,9 +150,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Đặt lại mật khẩu
-     */
     public function resetPassword(Request $request): JsonResponse
     {
         try {
@@ -174,7 +164,6 @@ class AuthController extends Controller
                 $request->input('code'),
                 $request->input('password')
             );
-
             if ($result) {
                 return response()->json([
                     'message' => 'Đặt lại mật khẩu thành công.'
@@ -200,13 +189,11 @@ class AuthController extends Controller
                 'error' => 'User not found or unauthorized'
             ], 401);
         }
-
         if ($user->id !== $userId) {
             return response()->json([
                 'error' => 'Unauthorized to update this user'
             ], 403);
         }
-
         try {
             $updateData = $request->validated();
 
@@ -222,9 +209,7 @@ class AuthController extends Controller
                     ], 400);
                 }
             }
-
             $updatedUser = $this->userService->updateUser($userId, $updateData);
-
             if ($updatedUser) {
                 return response()->json([
                     'message' => 'User updated successfully',
@@ -262,10 +247,7 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Làm mới access token từ refresh token
-     */
-    public function refreshToken(Request $request): JsonResponse
+    public function refreshToken(): JsonResponse
     {
         try {
             $oldToken = JWTAuth::getToken();

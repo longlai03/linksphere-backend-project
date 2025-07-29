@@ -20,13 +20,11 @@ class Notification extends Model
         'updated_at',
     ];
 
-    // Thông báo thuộc về User nào (người nhận)
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    // Thông báo được gửi bởi User nào (người gửi)
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');

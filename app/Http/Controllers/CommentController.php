@@ -16,10 +16,7 @@ class CommentController extends Controller
         $this->commentService = $commentService;
     }
 
-    /**
-     * Lấy danh sách comment của một post
-     */
-    public function index(Request $request, int $postId): JsonResponse
+    public function index(int $postId): JsonResponse
     {
         $result = $this->commentService->getCommentsByPostId($postId);
         if ($result['success']) {
@@ -29,9 +26,6 @@ class CommentController extends Controller
         }
     }
 
-    /**
-     * Tạo comment mới
-     */
     public function store(Request $request, int $postId): JsonResponse
     {
         $user = Auth::user();
@@ -50,9 +44,6 @@ class CommentController extends Controller
         }
     }
 
-    /**
-     * Cập nhật comment
-     */
     public function update(Request $request, int $commentId): JsonResponse
     {
         $user = Auth::user();
@@ -71,9 +62,6 @@ class CommentController extends Controller
         }
     }
 
-    /**
-     * Xóa comment
-     */
     public function destroy(int $commentId): JsonResponse
     {
         $user = Auth::user();
@@ -89,10 +77,7 @@ class CommentController extends Controller
         }
     }
 
-    /**
-     * Lấy danh sách reply của một comment
-     */
-    public function getReplies(Request $request, int $commentId): JsonResponse
+    public function getReplies(int $commentId): JsonResponse
     {
         $result = $this->commentService->getRepliesByCommentId($commentId);
         if ($result['success']) {

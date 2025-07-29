@@ -18,21 +18,16 @@ class PostController extends Controller
         $this->postService = $postService;
     }
 
-    /**
-     * Tạo bài đăng mới
-     */
     public function store(PostRequest $request): JsonResponse
     {
         try {
             $data = $request->validated();
             $post = $this->postService->createPost($data);
-
             if (!$post) {
                 return response()->json([
                     'error' => 'Có lỗi xảy ra khi tạo bài đăng'
                 ], 500);
             }
-
             return response()->json([
                 'message' => 'Post created successfully',
                 'post' => $post,
@@ -44,23 +39,17 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Lấy bài post theo ID
-     */
     public function show(int $postId): JsonResponse
     {
         try {
             $currentUser = Auth::user();
             $currentUserId = $currentUser ? $currentUser->id : 0;
-
             $post = $this->postService->getPostById($postId, $currentUserId);
-
             if (!$post) {
                 return response()->json([
                     'error' => 'Post not found'
                 ], 404);
             }
-
             return response()->json([
                 'post' => $post,
             ]);
@@ -71,9 +60,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Cập nhật bài post (user cần phải là chủ bài post)
-     */
     public function update(PostRequest $request, int $postId): JsonResponse
     {
         try {
@@ -83,16 +69,13 @@ class PostController extends Controller
                     'error' => 'Unauthorized: No user found'
                 ], 401);
             }
-
             $validatedData = $request->validated();
             $post = $this->postService->updatePost($postId, $user->id, $validatedData);
-
             if ($post === false) {
                 return response()->json([
                     'error' => 'Post not found or you are not authorized to update this post.'
                 ], 403);
             }
-
             return response()->json([
                 'message' => 'Post updated successfully',
                 'post' => $post,
@@ -104,9 +87,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Xóa bài post
-     */
     public function destroy(int $postId): JsonResponse
     {
         try {
@@ -116,15 +96,12 @@ class PostController extends Controller
                     'error' => 'Unauthorized: No user found'
                 ], 401);
             }
-
             $result = $this->postService->deletePost($postId, $user->id);
-
             if ($result === false) {
                 return response()->json([
                     'error' => 'Post not found or you are not authorized to delete this post.'
                 ], 403);
             }
-
             return response()->json([
                 'message' => 'Post deleted successfully'
             ]);
@@ -135,9 +112,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Lấy feed posts
-     */
     public function getFeedPost(Request $request): JsonResponse
     {
         try {
@@ -147,20 +121,16 @@ class PostController extends Controller
                     'error' => 'Unauthorized: No user found'
                 ], 401);
             }
-
             $filters = [];
             if ($request->has('exclude_ids')) {
                 $filters['exclude_ids'] = $request->input('exclude_ids');
             }
-
             $posts = $this->postService->getFeedPosts($user->id, $filters);
-
             if ($posts === false) {
                 return response()->json([
                     'error' => 'Có lỗi xảy ra khi lấy feed posts'
                 ], 500);
             }
-
             return response()->json([
                 'posts' => $posts
             ]);
@@ -171,9 +141,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Like a post
-     */
     public function like(int $postId): JsonResponse
     {
         try {
@@ -183,15 +150,12 @@ class PostController extends Controller
                     'error' => 'Unauthorized: No user found'
                 ], 401);
             }
-
             $result = $this->postService->likePost($postId, $user->id);
-
             if ($result === false) {
                 return response()->json([
                     'error' => 'User has already liked this post'
                 ], 400);
             }
-
             return response()->json([
                 'message' => 'Post liked successfully',
                 'likes_count' => $result['likes_count'],
@@ -204,9 +168,6 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * Unlike a post
-     */
     public function unlike(int $postId): JsonResponse
     {
         try {
@@ -216,15 +177,12 @@ class PostController extends Controller
                     'error' => 'Unauthorized: No user found'
                 ], 401);
             }
-
             $result = $this->postService->unlikePost($postId, $user->id);
-
             if ($result === false) {
                 return response()->json([
                     'error' => 'User has not liked this post'
                 ], 400);
             }
-
             return response()->json([
                 'message' => 'Post unliked successfully',
                 'likes_count' => $result['likes_count'],

@@ -12,9 +12,9 @@ class ConversationRepositoryElq implements ConversationRepository
     public function getUserConversations(int $userId): Collection
     {
         return Chat::where(function ($query) use ($userId) {
-                $query->where('create_by', $userId)
-                    ->orWhere('participant_id', $userId);
-            })
+            $query->where('create_by', $userId)
+                ->orWhere('participant_id', $userId);
+        })
             ->with([
                 'creator',
                 'participant',
@@ -99,26 +99,6 @@ class ConversationRepositoryElq implements ConversationRepository
         return $chat->create_by === $userId || $chat->participant_id === $userId;
     }
 
-    public function deleteConversation(int $conversationId): bool
-    {
-        $chat = Chat::find($conversationId);
-        if (!$chat) return false;
-        $chat->chatMessages()->delete();
-        return $chat->delete();
-    }
-
-    public function searchUsers(int $userId, string $query, int $limit = 10): Collection
-    {
-        return User::where('id', '!=', $userId)
-            ->where(function ($q) use ($query) {
-                $q->where('username', 'like', "%{$query}%")
-                  ->orWhere('nickname', 'like', "%{$query}%")
-                  ->orWhere('name', 'like', "%{$query}%");
-            })
-            ->select('id', 'username', 'nickname', 'avatar_url')
-            ->limit($limit)
-            ->get();
-    }
 
     public function findUserById(int $userId): ?User
     {

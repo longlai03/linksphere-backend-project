@@ -22,19 +22,16 @@ class ChatMessage extends Model
         'updated_at',
     ];
 
-    // Tin nhắn thuộc Chat nào
     public function chat(): BelongsTo
     {
         return $this->belongsTo(Chat::class);
     }
 
-    // Tin nhắn được gửi bởi User nào
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
     }
 
-    // Tin nhắn có thể có 1 file đính kèm
     public function attachment(): BelongsTo
     {
         return $this->belongsTo(Attachment::class);
